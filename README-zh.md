@@ -286,12 +286,85 @@ nextjs-with-supabase-acontext/
 
 ## 🚢 部署
 
-### Vercel（推荐）
+### 部署到 Vercel
+
+Vercel 部署将引导您创建 Supabase 账户和项目。
+
+安装 Supabase 集成后，所有相关的环境变量将自动分配给项目，因此部署将完全正常运行。
+
+**[使用 Vercel 部署](https://vercel.com/new/clone?repository-url=https://github.com/mbt1909432/Acontext-Agent-Playground)**
+
+上述操作还会将 Starter kit 克隆到您的 GitHub，您可以本地克隆并在本地开发。
+
+#### Vercel 配置说明
+
+部署到 Vercel 时，您有两个选项：
+
+**选项 1：一键部署（首次设置推荐）**
+
+1. 点击上面的"使用 Vercel 部署"按钮
+2. Vercel 将提示您：
+   - 登录 Vercel（或创建账户）
+   - 连接您的 GitHub 账户（如果尚未连接）
+   - 创建新的 Supabase 项目（或连接现有项目）
+3. 在 Supabase 集成设置期间：
+   - Vercel 将自动为您创建 Supabase 项目
+   - 所有必需的 Supabase 环境变量将自动配置：
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+4. 您需要在 Vercel 仪表板中手动添加其余环境变量：
+   - `ACONTEXT_API_KEY` - 您的 Acontext API 密钥
+   - `OPENAI_LLM_ENDPOINT` - OpenAI API 端点（默认：`https://api.openai.com/v1`）
+   - `OPENAI_LLM_API_KEY` - 您的 OpenAI API 密钥
+   - `OPENAI_LLM_MODEL` - 模型名称（例如：`gpt-4o-mini`）
+   - `OPENAI_LLM_TEMPERATURE` - 温度（默认：`0.7`）
+   - `OPENAI_LLM_MAX_TOKENS` - 最大 token 数（默认：`2000`）
+   - `BROWSER_USE_API_KEY` - 可选，用于浏览器自动化
+   - `ACONTEXT_BASE_URL` - 可选，默认为 `https://api.acontext.com/api/v1`
+5. 部署后，运行数据库迁移：
+   - 转到您的 Supabase 项目仪表板
+   - 导航到 SQL Editor
+   - 运行 `specs/001-chatbot-openai/schema.sql` 中的 SQL
+   - 运行 `specs/001-chatbot-openai/migration-acontext.sql` 中的 SQL
+
+**选项 2：手动部署（如果您已有 GitHub 仓库）**
 
 1. 将代码推送到 GitHub
-2. 在 [Vercel](https://vercel.com) 导入您的仓库
-3. 在 Vercel 仪表板中添加环境变量
-4. 部署！
+2. 转到 [Vercel 仪表板](https://vercel.com/dashboard)
+3. 点击"添加新项目"
+4. 导入您的 GitHub 仓库
+5. 配置环境变量：
+   - **Supabase 集成**：点击"添加集成" → 搜索"Supabase" → 连接您的 Supabase 项目
+     - 这将自动设置 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - **手动变量**：添加上面列出的其余环境变量
+6. 点击"部署"
+7. 部署后，在 Supabase SQL Editor 中运行数据库迁移
+
+#### Vercel 中的环境变量
+
+在 Vercel 中添加环境变量：
+
+1. 在 Vercel 仪表板中转到您的项目
+2. 导航到 **设置** → **环境变量**
+3. 添加每个变量及其值
+4. 选择要应用的环境（生产、预览、开发）
+5. 点击"保存"
+6. 重新部署应用程序以使更改生效
+
+**重要提示：**
+- 以 `NEXT_PUBLIC_` 开头的环境变量会暴露给浏览器
+- 保持敏感密钥（如 `OPENAI_LLM_API_KEY`、`ACONTEXT_API_KEY`）安全，切勿提交它们
+- 当您使用 Supabase 集成时，Vercel 会自动提供 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+#### Vercel 部署后的本地开发
+
+如果您只想在本地开发而不部署到 Vercel，请按照以下步骤操作：
+
+1. 从 GitHub 克隆仓库（在 Vercel 部署期间创建）
+2. 安装依赖：`npm install`
+3. 创建包含所有环境变量的 `.env.local` 文件（请参阅[安装步骤](#安装步骤)部分）
+4. 在 Supabase SQL Editor 中运行数据库迁移
+5. 启动开发服务器：`npm run dev`
 
 ### 其他平台
 

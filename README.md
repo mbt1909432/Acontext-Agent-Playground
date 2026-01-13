@@ -286,12 +286,85 @@ See the [Customization Guide](#adding-custom-tools) section above.
 
 ## 🚢 Deployment
 
-### Vercel (Recommended)
+### Deploy to Vercel
+
+Vercel deployment will guide you through creating a Supabase account and project.
+
+After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+
+**[Deploy with Vercel](https://vercel.com/new/clone?repository-url=https://github.com/mbt1909432/Acontext-Agent-Playground)**
+
+The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+
+#### Vercel Configuration Explained
+
+When deploying to Vercel, you have two options:
+
+**Option 1: One-Click Deploy (Recommended for First-Time Setup)**
+
+1. Click the "Deploy with Vercel" button above
+2. Vercel will prompt you to:
+   - Sign in to Vercel (or create an account)
+   - Connect your GitHub account (if not already connected)
+   - Create a new Supabase project (or connect existing one)
+3. During the Supabase integration setup:
+   - Vercel will automatically create a Supabase project for you
+   - All required Supabase environment variables will be automatically configured:
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+4. You'll need to manually add the remaining environment variables in Vercel dashboard:
+   - `ACONTEXT_API_KEY` - Your Acontext API key
+   - `OPENAI_LLM_ENDPOINT` - OpenAI API endpoint (default: `https://api.openai.com/v1`)
+   - `OPENAI_LLM_API_KEY` - Your OpenAI API key
+   - `OPENAI_LLM_MODEL` - Model name (e.g., `gpt-4o-mini`)
+   - `OPENAI_LLM_TEMPERATURE` - Temperature (default: `0.7`)
+   - `OPENAI_LLM_MAX_TOKENS` - Max tokens (default: `2000`)
+   - `BROWSER_USE_API_KEY` - Optional, for browser automation
+   - `ACONTEXT_BASE_URL` - Optional, defaults to `https://api.acontext.com/api/v1`
+5. After deployment, run the database migrations:
+   - Go to your Supabase project dashboard
+   - Navigate to SQL Editor
+   - Run the SQL from `specs/001-chatbot-openai/schema.sql`
+   - Run the SQL from `specs/001-chatbot-openai/migration-acontext.sql`
+
+**Option 2: Manual Deployment (If You Already Have a GitHub Repository)**
 
 1. Push your code to GitHub
-2. Import your repository in [Vercel](https://vercel.com)
-3. Add environment variables in Vercel dashboard
-4. Deploy!
+2. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+3. Click "Add New Project"
+4. Import your GitHub repository
+5. Configure environment variables:
+   - **Supabase Integration**: Click "Add Integration" → Search "Supabase" → Connect your Supabase project
+     - This automatically sets `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - **Manual Variables**: Add the remaining environment variables listed above
+6. Click "Deploy"
+7. After deployment, run the database migrations in Supabase SQL Editor
+
+#### Environment Variables in Vercel
+
+To add environment variables in Vercel:
+
+1. Go to your project in Vercel Dashboard
+2. Navigate to **Settings** → **Environment Variables**
+3. Add each variable with its value
+4. Select which environments to apply to (Production, Preview, Development)
+5. Click "Save"
+6. Redeploy your application for changes to take effect
+
+**Important Notes:**
+- Environment variables starting with `NEXT_PUBLIC_` are exposed to the browser
+- Keep sensitive keys (like `OPENAI_LLM_API_KEY`, `ACONTEXT_API_KEY`) secure and never commit them
+- Vercel automatically provides `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` when you use the Supabase integration
+
+#### Local Development After Vercel Deployment
+
+If you wish to just develop locally and not deploy to Vercel, follow the steps below:
+
+1. Clone the repository from GitHub (created during Vercel deployment)
+2. Install dependencies: `npm install`
+3. Create `.env.local` file with all environment variables (see [Installation](#installation) section)
+4. Run database migrations in Supabase SQL Editor
+5. Start development server: `npm run dev`
 
 ### Other Platforms
 
