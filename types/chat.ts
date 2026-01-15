@@ -12,7 +12,7 @@ export interface ChatMessage {
    * - array: Vision API format for images
    *   [{ type: "text", text: "..." }, { type: "image_url", image_url: { url: "data:image/..." } }]
    */
-  content: string | Array<
+  content: string | Array<    
     | { type: "text"; text: string }
     | { type: "image_url"; image_url: { url: string } }
   >;
@@ -22,6 +22,7 @@ export interface ChatMessage {
 
 export interface ChatSession {
   id: string;
+  
   userId: string;
   createdAt: Date | string;
   updatedAt: Date | string;
