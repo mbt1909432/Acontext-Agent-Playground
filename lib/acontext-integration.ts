@@ -680,10 +680,11 @@ async function listArtifactsRecursive(
       const artifactInfo = item.meta?.__artifact_info__;
       
       // Build full path (directory + filename)
-      // Acontext dashboard 显示的是目录 + 文件名，比如：
+      // Acontext's API/dashboard exposes directory + filename separately, e.g.:
       //   path: "/generated/2026-01-15/"
       //   filename: "image_xxx.jpg"
-      // 这里我们希望前端拿到的 path 就是完整路径："/generated/2026-01-15/image_xxx.jpg"
+      // We want the frontend to receive a single full path:
+      //   "/generated/2026-01-15/image_xxx.jpg"
       let fullPath: string;
       const rawPath: string | undefined = item.path;
       const rawFilename: string | undefined = item.filename;
@@ -693,14 +694,14 @@ async function listArtifactsRecursive(
         if (rawFilename) {
           fullPath = `${basePath}${rawFilename}`;
         } else {
-          // 目录项（没有 filename），保留目录路径本身
+          // Directory entry (no filename) - keep the directory path itself.
           fullPath = basePath;
         }
       } else if (rawFilename) {
-        // 根目录下的文件："/file.ext"
+        // File in the root directory: "/file.ext"
         fullPath = `/${rawFilename}`;
       } else {
-        // 两个都缺，就退回原始 path 或占位
+        // If both are missing, fall back to raw path or a placeholder.
         fullPath = rawPath || "unknown";
       }
       

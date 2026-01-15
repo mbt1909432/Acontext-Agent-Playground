@@ -322,7 +322,7 @@ export async function runImageGenerate(
     return {
       artifactPath: null,
       text: textOut,
-      message: "图片生成失败：上游未返回图片",
+      message: "Image generation failed: upstream did not return an image",
     };
   }
 
@@ -407,7 +407,9 @@ export async function runImageGenerate(
     thumbnailPath: null,
     publicUrl,
     text: textOut,
-    message: artifactPath ? "图片生成成功" : "图片生成失败：图片已生成但上传 artifact 失败",
+    message: artifactPath
+      ? "Image generated successfully"
+      : "Image generation failed: image generated but artifact upload failed",
   };
 }
 
