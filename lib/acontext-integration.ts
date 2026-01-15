@@ -588,25 +588,49 @@ export async function uploadFileToAcontext(
       fileBuffer = content;
     }
 
+    // Parse filename to separate directory path and filename
+    // filename format: "generated/2026-01-15/image.png" or "image.png"
+    const pathParts = filename.split('/').filter(part => part.length > 0);
+    const filenameOnly = pathParts.length > 0 ? pathParts[pathParts.length - 1] : filename;
+    const filePathDir = pathParts.length > 1 
+      ? '/' + pathParts.slice(0, -1).join('/') + '/'
+      : '/';
+
     // Upload the artifact
-    // The API expects file as [filename, Buffer, contentType] or FileUpload
+    // The API expects filePath (directory) and file (filename only) to be separate
     console.debug("[Acontext] Uploading artifact", {
       diskId: targetDiskId,
-      filename,
+      filename: filenameOnly,
+      filePath: filePathDir,
       mimeType,
       size: fileBuffer.length,
     });
 
     const artifact = await acontext.disks.artifacts.upsert(targetDiskId, {
-      file: [filename, fileBuffer, mimeType],
+      file: [filenameOnly, fileBuffer, mimeType],
+      filePath: filePathDir,
     });
 
     console.debug("[Acontext] Artifact uploaded successfully", {
-      artifact: artifact,
+      artifact,
     });
 
-    // Return the artifact path
-    return (artifact as any).path || filename;
+    // Build full path from artifact response
+    // artifact.path is the directory (e.g., "/generated/2026-01-15/")
+    // artifact.filename is the filename (e.g., "image_xxx.png")
+    const artifactPath = (artifact as any).path as string | undefined;
+    const artifactFilename = (artifact as any).filename as string | undefined;
+    
+    if (artifactPath && artifactFilename) {
+      // Combine path and filename, ensuring path ends with / and removing duplicate slashes
+      const normalizedPath = artifactPath.endsWith('/') ? artifactPath : artifactPath + '/';
+      const fullPath = normalizedPath + artifactFilename;
+      // Remove leading slash if present to match expected format
+      return fullPath.startsWith('/') ? fullPath.substring(1) : fullPath;
+    }
+
+    // Fallback to the original filename if artifact info is not available
+    return filename;
   } catch (error) {
     await logAcontextError("Failed to upload file", error, {
       filename,
@@ -629,25 +653,115 @@ async function listArtifactsRecursive(
   allArtifacts: Array<{ id?: string; path?: string; filename?: string; mimeType?: string; size?: number; createdAt?: string }> = []
 ): Promise<Array<{ id?: string; path?: string; filename?: string; mimeType?: string; size?: number; createdAt?: string }>> {
   try {
+    console.log(`[Acontext] listArtifactsRecursive: Listing path "${path}" in disk "${diskId}"`);
+    
     // List artifacts and directories in the current path
     const result = await acontext!.disks.artifacts.list(diskId, {
       path: path,
     });
 
+    console.log(`[Acontext] listArtifactsRecursive: API response for path "${path}":`, {
+      hasResult: !!result,
+      artifactsCount: Array.isArray(result?.artifacts) ? result.artifacts.length : 0,
+      directoriesCount: Array.isArray(result?.directories) ? result.directories.length : 0,
+      rawArtifacts: result?.artifacts,
+      rawDirectories: result?.directories,
+    });
+
     if (!result) {
+      console.warn(`[Acontext] listArtifactsRecursive: No result returned for path "${path}"`);
       return allArtifacts;
     }
 
     // Normalize and add files from current directory
     const items = Array.isArray(result.artifacts) ? result.artifacts : [];
-    const normalizedArtifacts = items.map((item: any) => ({
-      id: item.id || item.path || item.filename,
-      path: item.path || item.filename,
-      filename: item.filename || item.path?.split('/').pop() || 'unknown',
-      mimeType: item.mimeType || item.contentType || 'application/octet-stream',
-      size: item.size || item.length || 0,
+    const normalizedArtifacts = items.map((item: any) => {
+      // Extract metadata if available
+      const artifactInfo = item.meta?.__artifact_info__;
+      
+      // Build full path: if path is "/" and filename exists, combine them
+      // Otherwise use path as-is, or fall back to filename
+      let fullPath: string;
+      if (item.path === '/' && item.filename) {
+        // Path is root, combine with filename
+        fullPath = '/' + item.filename;
+      } else if (item.path && item.path !== '/') {
+        // Path is not root, use it as-is
+        fullPath = item.path;
+      } else if (item.filename) {
+        // No path or path is invalid, use filename
+        fullPath = '/' + item.filename;
+      } else {
+        // Fallback
+        fullPath = item.path || 'unknown';
+      }
+      
+      // Extract size from metadata if available
+      let size = item.size || item.length || 0;
+      if (artifactInfo && typeof artifactInfo === 'object') {
+        size = artifactInfo.size || artifactInfo.length || size;
+      }
+      
+      // Extract MIME type from metadata if available
+      // According to docs: __artifact_info__ contains content_type
+      let mimeType = item.mimeType || item.contentType || 'application/octet-stream';
+      if (artifactInfo && typeof artifactInfo === 'object') {
+        mimeType = artifactInfo.content_type || artifactInfo.contentType || 
+                   artifactInfo.mimeType || artifactInfo.type || mimeType;
+      }
+      
+      // Infer MIME type from file extension if still generic or missing
+      const filename = item.filename || fullPath.split('/').pop() || '';
+      if (mimeType === 'application/octet-stream' || !mimeType) {
+        const ext = filename.split('.').pop()?.toLowerCase() || '';
+        const mimeMap: Record<string, string> = {
+          png: 'image/png',
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          gif: 'image/gif',
+          webp: 'image/webp',
+          svg: 'image/svg+xml',
+          bmp: 'image/bmp',
+          ico: 'image/x-icon',
+          txt: 'text/plain',
+          json: 'application/json',
+          js: 'application/javascript',
+          jsx: 'application/javascript',
+          ts: 'application/typescript',
+          tsx: 'application/typescript',
+          html: 'text/html',
+          css: 'text/css',
+          xml: 'application/xml',
+          yaml: 'application/yaml',
+          yml: 'application/yaml',
+          md: 'text/markdown',
+          sh: 'application/x-sh',
+        };
+        if (mimeMap[ext]) {
+          mimeType = mimeMap[ext];
+        }
+      }
+      
+      const normalized = {
+        id: fullPath, // Use full path as ID
+        path: fullPath, // Use full path
+        filename: filename || 'unknown',
+        mimeType: mimeType,
+        size: size,
       createdAt: item.createdAt || item.created_at || item.timestamp,
-    }));
+      };
+      
+      console.log(`[Acontext] listArtifactsRecursive: Normalizing artifact:`, {
+        rawItem: {
+          ...item,
+          meta: item.meta ? JSON.parse(JSON.stringify(item.meta)) : undefined, // Deep clone for logging
+        },
+        artifactInfo: artifactInfo ? JSON.parse(JSON.stringify(artifactInfo)) : undefined,
+        normalized: normalized,
+      });
+      
+      return normalized;
+    });
 
     allArtifacts.push(...normalizedArtifacts);
 
@@ -713,12 +827,429 @@ export async function listAcontextArtifacts(
 }
 
 /**
+ * Get artifact content from Acontext Disk
+ * Returns the file content as Buffer or null if retrieval fails
+ * Also returns publicUrl if available for direct access
+ */
+export async function getAcontextArtifactContent(
+  filePath: string,
+  diskId?: string
+): Promise<{ content: Buffer; mimeType: string; publicUrl?: string } | null> {
+  const acontext = getAcontextClient();
+  if (!acontext) {
+    return null;
+  }
+
+  try {
+    const inferMimeTypeFromFilename = (name: string): string | undefined => {
+      const ext = name.split(".").pop()?.toLowerCase() || "";
+      const mimeMap: Record<string, string> = {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml",
+        bmp: "image/bmp",
+        ico: "image/x-icon",
+        txt: "text/plain",
+        json: "application/json",
+        js: "application/javascript",
+        jsx: "application/javascript",
+        ts: "application/typescript",
+        tsx: "application/typescript",
+        html: "text/html",
+        css: "text/css",
+        xml: "application/xml",
+        yaml: "application/yaml",
+        yml: "application/yaml",
+        md: "text/markdown",
+        markdown: "text/markdown",
+        sh: "application/x-sh",
+      };
+      return mimeMap[ext];
+    };
+
+    // If no diskId provided, list disks and use the first one
+    let targetDiskId = diskId;
+    if (!targetDiskId) {
+      const disks = await acontext.disks.list();
+      if (disks && disks.items && disks.items.length > 0) {
+        targetDiskId = disks.items[0].id;
+      } else {
+        console.debug("[Acontext] No disks found");
+        return null;
+      }
+    }
+
+    console.log("[Acontext] getAcontextArtifactContent: Starting", {
+      diskId: targetDiskId,
+      filePath,
+      filePathType: typeof filePath,
+      filePathLength: filePath?.length,
+    });
+
+    // Validate filePath - it should not be a directory path
+    if (!filePath || filePath === '/' || filePath.endsWith('/')) {
+      console.warn("[Acontext] getAcontextArtifactContent: Invalid filePath - cannot download directory", { 
+        filePath,
+        isEmpty: !filePath,
+        isRoot: filePath === '/',
+        endsWithSlash: filePath?.endsWith('/'),
+      });
+      return null;
+    }
+
+    // Extract filename and path from filePath
+    // filePath format: "/path/to/file.txt" or "file.txt"
+    const pathParts = filePath.split('/').filter(part => part.length > 0);
+    
+    if (pathParts.length === 0) {
+      console.warn("[Acontext] Invalid filePath: no filename found", { filePath });
+      return null;
+    }
+    
+    const filename = pathParts[pathParts.length - 1];
+    const filePathDir = pathParts.length > 1 
+      ? '/' + pathParts.slice(0, -1).join('/') 
+      : '/';
+    
+    console.log("[Acontext] getAcontextArtifactContent: Parsed path components", {
+      originalFilePath: filePath,
+      pathParts,
+      filename,
+      filePathDir,
+      pathPartsLength: pathParts.length,
+    });
+    
+    // Validate filename is not empty
+    if (!filename || filename.trim() === '') {
+      console.warn("[Acontext] getAcontextArtifactContent: Invalid filePath - empty filename", { 
+        filePath,
+        pathParts,
+        filename,
+      });
+      return null;
+    }
+    
+    // Use disks.artifacts.get API instead of download_file tool
+    console.log("[Acontext] getAcontextArtifactContent: Calling disks.artifacts.get API", {
+      diskId: targetDiskId,
+      filePath: filePathDir,
+      filename,
+    });
+    
+    const result = await acontext.disks.artifacts.get(targetDiskId, {
+      filePath: filePathDir,
+      filename,
+      withContent: true,
+      withPublicUrl: true,
+    });
+    
+    console.log("[Acontext] getAcontextArtifactContent: artifacts.get result", {
+      hasResult: !!result,
+      hasArtifact: !!result?.artifact,
+      hasContent: !!result?.content,
+      hasPublicUrl: !!result?.public_url,
+      contentType: result?.content?.type,
+      artifactMimeType: (result?.artifact as any)?.mimeType,
+    });
+
+    // Get MIME type - prioritize file extension inference over API response
+    // This ensures correct MIME types even if API returns incorrect ones (e.g., text/html for .md files)
+    let mimeType = "application/octet-stream";
+    
+    // First, try to infer from file extension (most reliable for known file types)
+    const inferredFromExt = inferMimeTypeFromFilename(filename);
+    if (inferredFromExt) {
+      mimeType = inferredFromExt;
+      console.log("[Acontext] getAcontextArtifactContent: Inferred MIME type from extension", {
+        extension: filename.split('.').pop()?.toLowerCase() || '',
+        mimeType,
+      });
+    }
+    
+    // Then check API response (but only if extension inference didn't find a match)
+    // This allows API to override for unknown extensions, but prevents API errors from affecting known types
+    if (mimeType === "application/octet-stream") {
+      // Try to get from content.type if available
+      if (result?.content) {
+        const contentData = result.content as any;
+        if (contentData.type && contentData.type !== "application/octet-stream") {
+          mimeType = contentData.type;
+        }
+      }
+      
+      // Then check artifact metadata (__artifact_info__.content_type as per docs)
+      if (mimeType === "application/octet-stream" && result?.artifact) {
+        const artifact = result.artifact as any;
+        
+        // Check __artifact_info__.content_type first (as per docs)
+        const artifactInfo = artifact.meta?.__artifact_info__;
+        if (artifactInfo && typeof artifactInfo === 'object') {
+          mimeType = artifactInfo.content_type || artifactInfo.contentType || 
+                     artifactInfo.mimeType || artifactInfo.type || mimeType;
+        }
+        
+        // Fallback to artifact-level properties if still generic
+        if (mimeType === "application/octet-stream") {
+          mimeType = artifact.mimeType || artifact.contentType || mimeType;
+        }
+      }
+      
+      if (mimeType !== "application/octet-stream") {
+        console.log("[Acontext] getAcontextArtifactContent: Using MIME type from API", {
+          mimeType,
+        });
+      }
+    }
+
+    // Get file content from the result
+    let content: Buffer;
+
+    const looksLikeBase64 = (value: string): boolean => {
+      // Fast, conservative check: base64 chars + optional padding, and length multiple of 4
+      const s = value.trim();
+      if (s.length < 16) return false;
+      if (s.length % 4 !== 0) return false;
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(s)) return false;
+      return true;
+    };
+    
+    if (result?.content) {
+      // Content is available directly from the API
+      const contentData = result.content as any;
+      
+      // IMPORTANT: For text files, prioritize content.text over content.raw
+      // According to Acontext docs, text files return content.text which is already parsed
+      // Using content.text ensures we get the complete, correctly decoded text content
+      if (contentData.text) {
+        // Text content (for text files) - this is the preferred format for text files
+        // content.text is already a string, so we convert it to Buffer for consistency
+        content = Buffer.from(contentData.text, "utf-8");
+        // Truncate text content to 200 characters for logging
+        const textPreview = contentData.text.length > 200 
+          ? contentData.text.substring(0, 200) + '...' 
+          : contentData.text;
+        console.log("[Acontext] getAcontextArtifactContent: Using content.text (preferred for text files)", {
+          bufferLength: content.length,
+          textLength: contentData.text.length,
+          textPreview,
+          hasRaw: !!contentData.raw,
+        });
+      } else if (contentData.raw) {
+        // Raw content (for binary files like images, or text files when text is not available)
+        if (Buffer.isBuffer(contentData.raw)) {
+          content = contentData.raw;
+        } else if (contentData.raw instanceof ArrayBuffer) {
+          content = Buffer.from(contentData.raw);
+        } else if (ArrayBuffer.isView(contentData.raw)) {
+          // Uint8Array / DataView / etc.
+          const view = contentData.raw as ArrayBufferView;
+          content = Buffer.from(view.buffer, view.byteOffset, view.byteLength);
+        } else if (
+          typeof contentData.raw === "object" &&
+          contentData.raw &&
+          (contentData.raw as any).type === "Buffer" &&
+          Array.isArray((contentData.raw as any).data)
+        ) {
+          // Some clients serialize Buffers as { type: "Buffer", data: number[] }
+          content = Buffer.from((contentData.raw as any).data);
+        } else if (typeof contentData.raw === "string") {
+          // Acontext may return either:
+          // - base64 encoded string (binary)
+          // - plain text string (already decoded)
+          // We must not blindly base64-decode, or text previews become garbled (e.g. "j�p").
+          const rawStr = contentData.raw;
+          if (looksLikeBase64(rawStr)) {
+            try {
+              const decoded = Buffer.from(rawStr, "base64");
+              // Heuristic: if decoding results in an extremely small buffer compared to input,
+              // it might be accidental (plain text). Prefer returning plain text bytes then.
+              if (decoded.length > 0 && decoded.length < rawStr.length) {
+                content = decoded;
+              } else {
+                content = Buffer.from(rawStr, "utf-8");
+              }
+            } catch {
+              content = Buffer.from(rawStr, "utf-8");
+            }
+          } else {
+            content = Buffer.from(rawStr, "utf-8");
+          }
+        } else {
+          console.warn("[Acontext] Unexpected content.raw format", typeof contentData.raw);
+          return null;
+        }
+        
+        // If content type is text, try to decode and show text preview
+        const isTextContent = contentData.type === 'text' || 
+                             (typeof contentData.type === 'string' && contentData.type.startsWith('text/'));
+        const logData: any = {
+          bufferLength: content.length,
+          contentType: contentData.type,
+        };
+        
+        if (isTextContent && content.length > 0) {
+          try {
+            // Try UTF-8 decoding first
+            let textContent = content.toString("utf-8");
+            const hasInvalidUtf8 = textContent.includes('\uFFFD'); // Replacement character indicates invalid UTF-8
+            
+            // If UTF-8 decoding failed, try latin1 encoding as fallback
+            if (hasInvalidUtf8) {
+              textContent = content.toString("latin1");
+              logData.hasInvalidUtf8 = true;
+              logData.fallbackEncoding = 'latin1';
+            }
+            
+            const textPreview = textContent.length > 200 
+              ? textContent.substring(0, 200) + '...' 
+              : textContent;
+            
+            // For very small buffers, also show hex representation for debugging
+            if (content.length <= 20) {
+              logData.hexPreview = content.toString('hex');
+            }
+            
+            logData.textLength = textContent.length;
+            logData.textPreview = textPreview;
+          } catch (e) {
+            // If UTF-8 decoding fails, it's probably not text
+            logData.textDecodeError = e instanceof Error ? e.message : String(e);
+            logData.hexPreview = content.toString('hex');
+          }
+        }
+        
+        console.log("[Acontext] getAcontextArtifactContent: Using content.raw (fallback)", logData);
+      } else {
+        console.warn("[Acontext] Content object missing both raw and text properties", {
+          contentKeys: Object.keys(contentData),
+        });
+        return null;
+      }
+    } else if (result?.public_url) {
+      // If content is not available but public_url is, fetch from URL
+      console.log("[Acontext] getAcontextArtifactContent: Fetching content from public_url", {
+        publicUrl: result.public_url,
+      });
+      
+      try {
+        const urlResponse = await fetch(result.public_url, {
+          // Disable compression to ensure we get the full content
+          headers: {
+            'Accept-Encoding': 'identity',
+          },
+        });
+        
+        if (!urlResponse.ok) {
+          throw new Error(`Failed to fetch from public URL: ${urlResponse.status} ${urlResponse.statusText}`);
+        }
+        
+        // Log response headers for debugging
+        const contentLength = urlResponse.headers.get('content-length');
+        const contentType = urlResponse.headers.get('content-type');
+        console.log("[Acontext] getAcontextArtifactContent: Response headers", {
+          status: urlResponse.status,
+          statusText: urlResponse.statusText,
+          contentLength,
+          contentType,
+          headers: Object.fromEntries(urlResponse.headers.entries()),
+        });
+        
+        // For text files, try using text() first to ensure proper encoding
+        const inferredMimeType = inferMimeTypeFromFilename(filename);
+        const isLikelyText = inferredMimeType?.startsWith('text/') || 
+                            inferredMimeType === 'application/json' ||
+                            inferredMimeType === 'application/xml' ||
+                            inferredMimeType === 'text/markdown';
+        
+        if (isLikelyText) {
+          // Try text() first for text files
+          try {
+            const textContent = await urlResponse.text();
+            content = Buffer.from(textContent, 'utf-8');
+            console.log("[Acontext] getAcontextArtifactContent: Fetched text content from URL", {
+              bufferLength: content.length,
+              textLength: textContent.length,
+              preview: textContent.substring(0, 100),
+            });
+          } catch (textError) {
+            console.warn("[Acontext] Failed to read as text, falling back to arrayBuffer", textError);
+            // Fallback to arrayBuffer
+            const arrayBuffer = await urlResponse.arrayBuffer();
+            content = Buffer.from(arrayBuffer);
+            console.log("[Acontext] getAcontextArtifactContent: Fetched binary content from URL (fallback)", {
+              bufferLength: content.length,
+            });
+          }
+        } else {
+          // For binary files, use arrayBuffer
+          const arrayBuffer = await urlResponse.arrayBuffer();
+          content = Buffer.from(arrayBuffer);
+          console.log("[Acontext] getAcontextArtifactContent: Fetched binary content from URL", {
+            bufferLength: content.length,
+            expectedLength: contentLength ? parseInt(contentLength, 10) : undefined,
+          });
+        }
+        
+        // Verify content length matches header if available
+        if (contentLength) {
+          const expectedLength = parseInt(contentLength, 10);
+          if (content.length !== expectedLength) {
+            console.warn("[Acontext] Content length mismatch!", {
+              expected: expectedLength,
+              actual: content.length,
+              difference: expectedLength - content.length,
+            });
+          }
+        }
+      } catch (fetchError) {
+        console.error("[Acontext] Failed to fetch content from public URL", fetchError);
+        return null;
+      }
+    } else {
+      console.warn("[Acontext] No content or public_url available in result");
+      return null;
+    }
+    
+    // Keep logging concise: only meta information, no raw buffer data
+    console.log("[Acontext] getAcontextArtifactContent: Final content Buffer", {
+      bufferLength: content.length,
+      mimeType,
+    });
+
+    console.debug("[Acontext] Artifact content retrieved successfully", {
+      size: content.length,
+      mimeType,
+      hasPublicUrl: !!result?.public_url,
+    });
+
+    return { 
+      content, 
+      mimeType,
+      publicUrl: result?.public_url || undefined,
+    };
+  } catch (error) {
+    await logAcontextError("Failed to get artifact content", error, {
+      filePath,
+      diskId,
+    });
+    return null;
+  }
+}
+
+/**
  * Store a message in Acontext session
+ * Supports both string content and Vision API format (array with images)
  */
 export async function storeMessageInAcontext(
   acontextSessionId: string,
   role: "user" | "assistant" | "system",
-  content: string,
+  content: string | Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string } }
+  >,
   format: "openai" | "anthropic" | "gemini" = "openai"
 ): Promise<boolean> {
   const acontext = getAcontextClient();
@@ -729,15 +1260,21 @@ export async function storeMessageInAcontext(
   try {
     // Build message blob in the format expected by Acontext
     // For OpenAI format, we can pass a simple object
+    // Support both string and array (Vision API) formats
     const messageBlob: Record<string, unknown> = {
       role,
       content,
     };
     
+    const contentLength = typeof content === "string" 
+      ? content.length 
+      : JSON.stringify(content).length;
+    
     console.debug("[Acontext] Storing message", {
       acontextSessionId,
       role,
-      contentLength: content.length,
+      contentLength,
+      isArray: Array.isArray(content),
       format,
     });
     
@@ -751,7 +1288,7 @@ export async function storeMessageInAcontext(
     await logAcontextError("Failed to store message", error, {
       acontextSessionId,
       role,
-      contentLength: content.length,
+      contentLength: typeof content === "string" ? content.length : JSON.stringify(content).length,
       format,
     });
     return false;
@@ -911,7 +1448,10 @@ export async function loadMessagesFromAcontext(
   id?: string;
   sessionId?: string;
   role: "user" | "assistant" | "system";
-  content: string;
+  content: string | Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string } }
+  >;
   createdAt?: Date | string;
   toolCalls?: import("@/types/chat").ToolInvocation[];
 }>> {
@@ -951,12 +1491,16 @@ export async function loadMessagesFromAcontext(
     // Convert Acontext messages to ChatMessage format
     const chatMessages = messages.items.map((msg: any, index: number) => {
       // Extract content - handle both string and array formats
-      let content: string;
+      // Preserve Vision API format (array) so images can be used as context
+      let content: string | Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      >;
       if (typeof msg.content === "string") {
         content = msg.content;
       } else if (Array.isArray(msg.content)) {
-        // For Vision API format, convert to string representation
-        content = JSON.stringify(msg.content);
+        // Preserve Vision API format (array) for images
+        content = msg.content;
       } else {
         content = String(msg.content);
       }

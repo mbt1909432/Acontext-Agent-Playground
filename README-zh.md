@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/badge/Next.js-15+-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
     <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
     <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
-    <img src="https://img.shields.io/badge/Acontext-FF6B6B?style=for-the-badge" alt="Acontext" />
+    <a href="https://acontext.io"><img src="https://assets.memodb.io/Acontext/badge-made-with-acontext.svg" alt="Made with Acontext" /></a>
   </p>
 </div>
 
@@ -307,6 +307,9 @@ nextjs-with-supabase-acontext/
 | `OPENAI_LLM_TEMPERATURE` | 温度（0-2） | 否（默认：0.7） |
 | `OPENAI_LLM_MAX_TOKENS` | 响应最大 token 数 | 否（默认：2000） |
 | `BROWSER_USE_API_KEY` | Browser Use Cloud API 密钥 | 否（可选） |
+| `IMAGE_GEN_API_KEY` | 生图上游 API key（用于 `x-goog-api-key`） | 否（可选，仅 image_generate 需要） |
+| `IMAGE_GEN_BASE_URL` | 生图上游 base URL | 否（默认：`https://api.openai-next.com`） |
+| `IMAGE_GEN_DEFAULT_MODEL` | 生图模型（服务端固定，不允许由 tool 入参覆盖） | 否（默认：`gemini-3-pro-image-preview`） |
 
 ## 🚢 部署
 

@@ -10,7 +10,7 @@ import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, X, Send, Loader2, Plus, ChevronDown, ChevronUp, Wrench, Trash2, Paperclip, File, FolderOpen, AlertTriangle } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Plus, ChevronDown, ChevronUp, Wrench, Trash2, Paperclip, File, FolderOpen, AlertTriangle, FileText, ExternalLink, Download } from "lucide-react";
 import type { ChatMessage, ChatResponse, ToolInvocation, ChatSession } from "@/types/chat";
 
 interface ChatbotPanelProps {
@@ -70,11 +70,50 @@ function normalizeMessageContent(
 }
 
 /**
+ * Render message content with support for images and links
+ * Handles both string content and Vision API format (array with text and images)
+ */
+function renderMessageContent(content: ChatMessage["content"]): React.ReactNode {
+  // If content is an array (Vision API format), render images and text
+  if (Array.isArray(content)) {
+    const parts: React.ReactNode[] = [];
+    let key = 0;
+
+    for (const item of content) {
+      if (item.type === "text") {
+        // Render text with links
+        parts.push(
+          <div key={`text-${key++}`} className="mb-2">
+            {renderLinks(item.text)}
+          </div>
+        );
+      } else if (item.type === "image_url") {
+        // Render image
+        parts.push(
+          <div key={`image-${key++}`} className="mb-2">
+            <img
+              src={item.image_url.url}
+              alt="Uploaded image"
+              className="max-w-full h-auto rounded-lg border border-border"
+              style={{ maxHeight: "400px" }}
+            />
+          </div>
+        );
+      }
+    }
+
+    return parts.length > 0 ? <>{parts}</> : null;
+  }
+
+  // If content is a string, render with links
+  return renderLinks(content);
+}
+
+/**
  * Convert URLs and Markdown links in text to clickable links
  * Handles both Markdown format [text](url) and plain URLs
  */
-function renderLinks(content: ChatMessage["content"]): React.ReactNode {
-  const text = normalizeMessageContent(content);
+function renderLinks(text: string): React.ReactNode {
   // First, handle Markdown links: [text](url)
   const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const parts: React.ReactNode[] = [];
@@ -492,10 +531,22 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
   }>>([]);
   const [isFilesLoading, setIsFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState<string | null>(null);
+  const [filePreviews, setFilePreviews] = useState<Map<string, {
+    content: string; // base64 for images, text for text files, or URL if isUrl is true
+    mimeType: string;
+    isLoading: boolean;
+    error?: string;
+    isUrl?: boolean; // true if content is a URL (publicUrl) instead of base64/text
+    publicUrl?: string; // public URL for direct access to the file
+  }>>(new Map());
+  const [filePublicUrls, setFilePublicUrls] = useState<Map<string, string>>(new Map()); // Store publicUrl for each file
+  // Track in-flight preview loads to avoid duplicate /artifacts/content requests
+  const previewLoadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
   const [attachments, setAttachments] = useState<Array<{
     filename: string;
-    content: string; // base64
+    content: string; // base64 for images/files, text content for text files
     mimeType: string;
+    isTextFile?: boolean; // true if this is a text file with content read as text
   }>>([]);
   const [tokenCounts, setTokenCounts] = useState<{ total_tokens: number } | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -555,6 +606,80 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
       typewriterDisplayRef.current.clear();
     };
   }, []);
+
+  // Auto-load previews for previewable files when files list changes
+  useEffect(() => {
+    if (!isFilesModalOpen) return;
+
+    // Function to fetch publicUrl for a file (lightweight, should be much faster than full content)
+    const fetchFilePublicUrl = async (file: {
+      id?: string;
+      path?: string;
+      filename?: string;
+      mimeType?: string;
+    }) => {
+      const fileKey = file.id || file.path || file.filename || "";
+      if (!fileKey || !file.path) return;
+
+      // Skip if already fetched
+      if (filePublicUrls.has(fileKey)) return;
+
+      try {
+        const url = acontextDiskId
+          ? `/api/acontext/artifacts/content?filePath=${encodeURIComponent(file.path)}&diskId=${encodeURIComponent(acontextDiskId)}&metaOnly=true`
+          : `/api/acontext/artifacts/content?filePath=${encodeURIComponent(file.path)}&metaOnly=true`;
+
+        const res = await fetch(url);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (data.success && data.publicUrl) {
+          // Store public URL for download / external open
+          setFilePublicUrls(prev => new Map(prev).set(fileKey, data.publicUrl));
+
+          // Also create a lightweight preview entry for image files so that
+          // the Files modal can render an inline preview without any extra
+          // thumbnail artifacts being written to Acontext Disk.
+          const mimeType = file.mimeType || "";
+          const { isImage } = detectFileType(file.filename, mimeType);
+
+          if (isImage) {
+            setFilePreviews(prev => {
+              const next = new Map(prev);
+              const existing = next.get(fileKey);
+
+              // Do not overwrite an existing or in-flight preview.
+              if (existing && (existing.content || existing.isLoading)) {
+                return next;
+              }
+
+              next.set(fileKey, {
+                content: data.publicUrl,
+                mimeType: mimeType || "image/*",
+                isLoading: false,
+                isUrl: true,
+                publicUrl: data.publicUrl,
+              });
+
+              return next;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[UI] Failed to fetch publicUrl for file", { fileKey, error: err });
+      }
+    };
+
+    files.forEach((file) => {
+      const fileKey = file.id || file.path || file.filename || "";
+      if (!fileKey || !file.path) return;
+
+      // Prefetch publicUrl metadata for all files (used for download links, etc.)
+      // and, for images, populate a lightweight preview based on the publicUrl.
+      fetchFilePublicUrl(file);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, isFilesModalOpen, filePreviews, filePublicUrls, acontextDiskId]);
 
   // Typewriter effect: gradually display buffered content
   const startTypewriter = (messageId: string, targetContent: string) => {
@@ -757,14 +882,43 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    // Text file extensions to auto-read
+    const textFileExtensions = ['.txt', '.md', '.tex', '.json', '.csv', '.log', '.xml', '.yaml', '.yml', '.ini', '.cfg', '.conf', '.sh', '.bat', '.ps1', '.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.cpp', '.c', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.scala', '.sql', '.html', '.css', '.scss', '.sass', '.less', '.vue', '.svelte'];
+
     const newAttachments: Array<{
       filename: string;
       content: string;
       mimeType: string;
+      isTextFile?: boolean;
     }> = [];
 
     for (const file of Array.from(files)) {
       try {
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        const isTextFile = textFileExtensions.includes(fileExtension) || 
+                          file.type.startsWith('text/') ||
+                          file.type === 'application/json' ||
+                          file.type === 'application/xml';
+
+        if (isTextFile) {
+          // Read text file as text content
+          const textContent = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve(reader.result as string);
+            };
+            reader.onerror = reject;
+            reader.readAsText(file, 'UTF-8');
+          });
+
+          newAttachments.push({
+            filename: file.name,
+            content: textContent,
+            mimeType: file.type || "text/plain",
+            isTextFile: true,
+          });
+        } else {
+          // Read non-text files as base64 (for images, etc.)
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => {
@@ -783,7 +937,9 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
           filename: file.name,
           content: base64,
           mimeType: file.type || "application/octet-stream",
+            isTextFile: false,
         });
+        }
       } catch (error) {
         console.error("Failed to read file:", error);
         setError(`Failed to read file: ${file.name}`);
@@ -833,6 +989,316 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
     }
   };
 
+  // Helper function to detect file type based on extension and MIME type
+  const detectFileType = (filename?: string, mimeType?: string): { isImage: boolean; isText: boolean } => {
+    const mime = mimeType || "";
+    const name = filename || "";
+    const ext = name.split('.').pop()?.toLowerCase() || "";
+    
+    // Image detection: check MIME type or extension
+    const isImage = mime.startsWith("image/") || 
+                   ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext);
+    
+    // Text detection: check MIME type or extension
+    const isText = mime.startsWith("text/") ||
+                   mime === "application/json" ||
+                   mime === "application/javascript" ||
+                   mime === "application/xml" ||
+                   mime === "application/x-sh" ||
+                   mime === "application/x-yaml" ||
+                   mime === "application/yaml" ||
+                   ["txt", "json", "js", "jsx", "ts", "tsx", "html", "css", "xml", "yaml", "yml", "md", "sh", "bash", "py", "java", "cpp", "c", "h", "go", "rs", "php", "rb", "swift", "kt"].includes(ext);
+    
+    return { isImage, isText };
+  };
+
+  const handleLoadFilePreview = async (file: {
+    id?: string;
+    path?: string;
+    filename?: string;
+    mimeType?: string;
+  }) => {
+    console.log("[UI] handleLoadFilePreview: Called with file", {
+      file,
+      fileId: file.id,
+      filePath: file.path,
+      filename: file.filename,
+      mimeType: file.mimeType,
+    });
+    
+    const fileKey = file.id || file.path || file.filename || "";
+    if (!fileKey || !file.path) {
+      console.warn("[UI] handleLoadFilePreview: Missing fileKey or file.path", {
+        fileKey,
+        filePath: file.path,
+      });
+      return;
+    }
+
+    // Check if already loaded or loading
+    const existingPreview = filePreviews.get(fileKey);
+    if (existingPreview && (existingPreview.content || existingPreview.isLoading)) {
+      console.log("[UI] handleLoadFilePreview: Preview already exists or loading", {
+        fileKey,
+        hasContent: !!existingPreview.content,
+        isLoading: existingPreview.isLoading,
+      });
+      return;
+    }
+
+    // If there is already an in-flight request for this file, reuse it instead of firing a new one
+    const inFlight = previewLoadPromisesRef.current.get(fileKey);
+    if (inFlight) {
+      console.log("[UI] handleLoadFilePreview: Reusing in-flight preview load", { fileKey });
+      await inFlight;
+      return;
+    }
+
+    // Check if file is previewable (image or text)
+    const mimeType = file.mimeType || "";
+    const { isImage, isText } = detectFileType(file.filename, mimeType);
+
+    console.log("[UI] handleLoadFilePreview: File type detection", {
+      filename: file.filename,
+      mimeType,
+      isImage,
+      isText,
+      isPreviewable: isImage || isText,
+    });
+
+    if (!isImage && !isText) {
+      console.log("[UI] handleLoadFilePreview: File is not previewable, skipping");
+      return; // Don't preview non-image/non-text files
+    }
+
+    // Create and register a single in-flight promise for this fileKey
+    const loadPromise = (async () => {
+      // Set loading state
+      setFilePreviews(prev => new Map(prev).set(fileKey, {
+        content: "",
+        mimeType: mimeType,
+        isLoading: true,
+      }));
+
+      try {
+        const safePath = file.path || "";
+        const url = acontextDiskId
+          ? `/api/acontext/artifacts/content?filePath=${encodeURIComponent(safePath)}&diskId=${encodeURIComponent(acontextDiskId)}`
+          : `/api/acontext/artifacts/content?filePath=${encodeURIComponent(safePath)}`;
+        
+        console.log("[UI] handleLoadFilePreview: Fetching preview", {
+          url,
+          filePath: file.path,
+          diskId: acontextDiskId,
+        });
+        
+        const res = await fetch(url);
+        
+        console.log("[UI] handleLoadFilePreview: Fetch response", {
+          ok: res.ok,
+          status: res.status,
+          statusText: res.statusText,
+        });
+        if (!res.ok) {
+          throw new Error("Failed to load file preview");
+        }
+
+        const data = await res.json();
+        
+        console.log("[UI] handleLoadFilePreview: API response data", {
+          success: data.success,
+          hasContent: !!data.content,
+          hasPublicUrl: !!data.publicUrl,
+          contentType: typeof data.content,
+          contentLength: data.content?.length,
+          reportedSize: data.size,
+          mimeType: data.mimeType,
+          contentPreview: data.content?.substring(0, 100),
+        });
+        
+        if (!data.success) {
+          throw new Error("Invalid response from server");
+        }
+
+        // Determine correct MIME type: use server's MIME type, or infer from extension if generic
+        let finalMimeType = data.mimeType || mimeType;
+        if (finalMimeType === "application/octet-stream" || !finalMimeType) {
+          // Infer MIME type from file extension
+          const ext = (file.filename || "").split('.').pop()?.toLowerCase() || "";
+          const mimeMap: Record<string, string> = {
+            png: "image/png",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            gif: "image/gif",
+            webp: "image/webp",
+            svg: "image/svg+xml",
+            bmp: "image/bmp",
+            ico: "image/x-icon",
+            txt: "text/plain",
+            json: "application/json",
+            js: "application/javascript",
+            jsx: "application/javascript",
+            ts: "application/typescript",
+            tsx: "application/typescript",
+            html: "text/html",
+            css: "text/css",
+            xml: "application/xml",
+            yaml: "application/yaml",
+            yml: "application/yaml",
+            md: "text/markdown",
+            sh: "application/x-sh",
+          };
+          if (mimeMap[ext]) {
+            finalMimeType = mimeMap[ext];
+          }
+        }
+
+        const { isText: detectedIsText, isImage: detectedIsImage } = detectFileType(file.filename, finalMimeType);
+        
+        console.log("[UI] handleLoadFilePreview: File type detection", {
+          filename: file.filename,
+          finalMimeType,
+          detectedIsText,
+          detectedIsImage,
+          contentLength: data.content?.length,
+          reportedSize: data.size,
+          hasPublicUrl: !!data.publicUrl,
+        });
+        
+        // For images, prefer using publicUrl if available (more efficient and avoids base64 issues)
+        if (detectedIsImage && data.publicUrl) {
+          console.log("[UI] handleLoadFilePreview: Using publicUrl for image", {
+            publicUrl: data.publicUrl,
+          });
+          setFilePreviews(prev => new Map(prev).set(fileKey, {
+            content: data.publicUrl, // Store URL as content for images
+            mimeType: finalMimeType,
+            isLoading: false,
+            isUrl: true, // Flag to indicate this is a URL, not base64 content
+            publicUrl: data.publicUrl, // Store publicUrl for display
+          }));
+          return;
+        }
+        
+        // Fallback to content if no publicUrl or not an image
+        if (!data.content) {
+          throw new Error("No content or publicUrl available");
+        }
+
+        // Validate content size for images
+        if (detectedIsImage && data.size) {
+          const minImageSize = 100; // Minimum reasonable size for an image (bytes)
+          if (data.size < minImageSize) {
+            console.warn("[UI] handleLoadFilePreview: Image file seems too small", {
+              filename: file.filename,
+              reportedSize: data.size,
+              contentLength: data.content?.length,
+              minImageSize,
+            });
+          }
+        }
+        
+        // Handle content based on type:
+        // - If isText: true, content is already a text string (no decoding needed)
+        // - If isText: false or undefined, content is base64 encoded
+        let content = data.content;
+        
+        // Check if backend returned text content directly (new format)
+        const isTextContent = data.isText === true;
+        
+        // Only decode base64 if it's a text file and content is base64 encoded (old format or binary)
+        if (detectedIsText && !detectedIsImage && !isTextContent) {
+          // Backward compatibility: decode base64 for text files (old API format)
+          try {
+            // Decode base64 to binary string
+            const binaryString = atob(data.content);
+            // Convert binary string to Uint8Array (byte array)
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            // Decode UTF-8 bytes to text string
+            const decoder = new TextDecoder('utf-8');
+            content = decoder.decode(bytes);
+            console.log("[UI] handleLoadFilePreview: Decoded base64 text content (backward compatibility)", {
+              decodedLength: content.length,
+              originalBase64Length: data.content.length,
+            });
+          } catch (e) {
+            console.warn("[UI] Failed to decode text content:", e);
+            content = data.content;
+          }
+        } else if (isTextContent) {
+          // New format: content is already text, no decoding needed
+          console.log("[UI] handleLoadFilePreview: Using direct text content (no base64 decoding)", {
+            textLength: content.length,
+          });
+        } else {
+          // For images and binary files, ensure content is a clean base64 string
+          if (typeof content === 'string') {
+            // Remove any whitespace characters
+            content = content.replace(/\s/g, '');
+          }
+          
+          // Validate base64 content length matches expected size
+          if (detectedIsImage && data.size) {
+            // Base64 encoding increases size by ~33%, so base64 length should be roughly 4/3 of original
+            const expectedBase64Length = Math.ceil(data.size * 4 / 3);
+            const actualBase64Length = content.length;
+            const tolerance = 10; // Allow some tolerance
+            
+            if (Math.abs(actualBase64Length - expectedBase64Length) > tolerance) {
+              console.warn("[UI] handleLoadFilePreview: Base64 content length mismatch", {
+                filename: file.filename,
+                reportedSize: data.size,
+                expectedBase64Length,
+                actualBase64Length,
+                difference: actualBase64Length - expectedBase64Length,
+              });
+            }
+          }
+          
+          console.log("[UI] handleLoadFilePreview: Keeping content as base64", {
+            isImage: detectedIsImage,
+            contentLength: content.length,
+            reportedSize: data.size,
+          });
+        }
+
+        setFilePreviews(prev => new Map(prev).set(fileKey, {
+          content: content,
+          mimeType: finalMimeType,
+          isLoading: false,
+          publicUrl: data.publicUrl, // Store publicUrl if available
+        }));
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load preview";
+        // Use warn (not error) to avoid Next.js dev overlay "Console Error" for expected failures
+        // (e.g. missing artifact, transient network issues). Also log stack explicitly because
+        // the Next.js overlay often serializes `Error` as `{}`.
+        console.warn("[UI] handleLoadFilePreview: Failed to load preview", {
+          fileKey,
+          filePath: file.path,
+          filename: file.filename,
+          errorMessage,
+          errorStack: err instanceof Error ? err.stack : undefined,
+        });
+        
+        setFilePreviews(prev => new Map(prev).set(fileKey, {
+          content: "",
+          mimeType: mimeType,
+          isLoading: false,
+          error: errorMessage,
+        }));
+      } finally {
+        previewLoadPromisesRef.current.delete(fileKey);
+      }
+    })();
+
+    previewLoadPromisesRef.current.set(fileKey, loadPromise);
+    await loadPromise;
+  };
+
   const handleManualCompress = async () => {
       if (!sessionId) {
       setError("An existing session is required to compress context");
@@ -871,19 +1337,96 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
     }
   };
 
+  // Helper function to convert text to base64
+  const textToBase64 = (text: string): string => {
+    // Use TextEncoder to handle Unicode properly
+    const bytes = new TextEncoder().encode(text);
+    const binary = String.fromCharCode(...bytes);
+    return btoa(binary);
+  };
+
   const handleSend = async () => {
     if ((!input.trim() && attachments.length === 0) || isLoading) return;
 
+    const messageContent = input.trim();
+    const currentAttachments = [...attachments];
+    
+    // Separate text files from other attachments
+    const textFiles = currentAttachments.filter(att => att.isTextFile === true);
+    const otherAttachments = currentAttachments.filter(att => att.isTextFile !== true);
+    
+    // Build text content including text files
+    let textContentParts: string[] = [];
+    if (messageContent.trim()) {
+      textContentParts.push(messageContent);
+    }
+    
+    // Add text file contents to message
+    for (const textFile of textFiles) {
+      textContentParts.push(`\n\n--- File: ${textFile.filename} ---\n${textFile.content}`);
+    }
+    
+    const combinedTextContent = textContentParts.length > 0 
+      ? textContentParts.join('') 
+      : (otherAttachments.length > 0 ? "[Attachment]" : "");
+    
+    // Build user message content with attachments (Vision API format for images)
+    let userMessageContent: ChatMessage["content"];
+    if (otherAttachments.length > 0) {
+      const hasImages = otherAttachments.some((att) =>
+        att.mimeType.startsWith("image/")
+      );
+
+      if (hasImages) {
+        // Use Vision API format: content as array with text and images
+        const contentParts: Array<
+          | { type: "text"; text: string }
+          | { type: "image_url"; image_url: { url: string } }
+        > = [];
+
+        if (combinedTextContent.trim()) {
+          contentParts.push({
+            type: "text",
+            text: combinedTextContent,
+          });
+        }
+
+        for (const att of otherAttachments) {
+          if (att.mimeType.startsWith("image/")) {
+            const dataUrl = `data:${att.mimeType};base64,${att.content}`;
+            contentParts.push({
+              type: "image_url",
+              image_url: { url: dataUrl },
+            });
+          } else {
+            contentParts.push({
+              type: "text",
+              text: `\n[Attachment: ${att.filename} (${att.mimeType})]`,
+            });
+          }
+        }
+
+        userMessageContent = contentParts;
+      } else {
+        // No images, use regular text format
+        let finalTextContent = combinedTextContent || "[Attachment]";
+        for (const att of otherAttachments) {
+          finalTextContent += `\n\n[Attachment: ${att.filename} (${att.mimeType})]`;
+        }
+        userMessageContent = finalTextContent;
+      }
+    } else {
+      userMessageContent = combinedTextContent || "[Attachment]";
+    }
+
     const userMessage: ChatMessage = {
       role: "user",
-      content: input.trim() || "[Attachment]",
+      content: userMessageContent,
     };
 
     // Add user message to UI immediately
     setMessages((prev) => [...prev, userMessage]);
-    const messageContent = input.trim();
     setInput("");
-    const currentAttachments = [...attachments];
     setAttachments([]);
     setError(null);
     setIsLoading(true);
@@ -892,13 +1435,28 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
       const enabledToolsForRequest =
         availableTools.length > 0 ? enabledToolNames : undefined;
 
+      // Prepare attachments for API: include both text files and other attachments
+      // Convert text file content to base64 for API compatibility
+      const attachmentsForAPI = [
+        ...textFiles.map(att => ({
+          filename: att.filename,
+          content: textToBase64(att.content), // Convert text to base64
+          mimeType: att.mimeType,
+        })),
+        ...otherAttachments.map(att => ({
+          filename: att.filename,
+          content: att.content, // Already base64
+          mimeType: att.mimeType,
+        })),
+      ];
+
       const response = await fetch("/api/chatbot", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: messageContent || "[Attachment]",
+          message: combinedTextContent || (attachmentsForAPI.length > 0 ? "[Attachment]" : ""),
           sessionId,
           messages: messages.map((m) => ({
             role: m.role,
@@ -906,7 +1464,7 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
           })),
           enabledToolNames: enabledToolsForRequest,
           stream: true, // Enable streaming for Browser Use tasks
-          attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
+          attachments: attachmentsForAPI.length > 0 ? attachmentsForAPI : undefined,
         }),
       });
 
@@ -1273,9 +1831,9 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">
-                      {renderLinks(message.content)}
-                    </p>
+                    <div className="text-sm whitespace-pre-wrap">
+                      {renderMessageContent(message.content)}
+                    </div>
                     {message.toolCalls && message.toolCalls.length > 0 && (
                       <ToolCallsDisplay toolCalls={message.toolCalls} isFullPage={false} />
                     )}
@@ -1307,9 +1865,16 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                     key={index}
                     className="flex items-center gap-2 rounded-lg border border-primary/50 bg-muted px-3 py-1.5"
                   >
+                    {attachment.isTextFile ? (
+                      <FileText className="h-3 w-3 text-primary" />
+                    ) : (
                     <File className="h-3 w-3 text-primary" />
+                    )}
                     <span className="text-xs">
                       {attachment.filename}
+                      {attachment.isTextFile && (
+                        <span className="ml-1 text-muted-foreground">(read)</span>
+                      )}
                     </span>
                     <button
                       onClick={() => handleRemoveAttachment(index)}
@@ -1719,7 +2284,7 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                     {message.role === "user" ? "User" : "Acontext Worker"}
                   </div>
                   <div className="text-sm leading-relaxed">
-                    {renderLinks(message.content)}
+                    {renderMessageContent(message.content)}
                   </div>
                   {message.toolCalls && message.toolCalls.length > 0 && (
                     <ToolCallsDisplay
@@ -1774,9 +2339,16 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                   key={index}
                   className="flex items-center gap-2 rounded-lg border border-primary/50 bg-card px-3 py-1.5"
                 >
+                  {attachment.isTextFile ? (
+                    <FileText className="h-3 w-3 text-primary" />
+                  ) : (
                   <File className="h-3 w-3 text-primary" />
+                  )}
                   <span className="text-xs text-foreground">
                     {attachment.filename}
+                    {attachment.isTextFile && (
+                      <span className="ml-1 text-muted-foreground">(read)</span>
+                    )}
                   </span>
                   <button
                     onClick={() => handleRemoveAttachment(index)}
@@ -1932,9 +2504,29 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                   </div>
                 )}
 
-                {files.map((file, index) => (
-                  <div
-                    key={file.id || file.path || index}
+                {files.map((file, index) => {
+                  const fileKey = file.id || file.path || file.filename || String(index);
+                  const preview = filePreviews.get(fileKey);
+                  const mimeType = file.mimeType || "";
+                  const { isImage, isText } = detectFileType(file.filename, mimeType);
+                  const isPreviewable = isImage || isText;
+                  
+                  // Determine preview display type based on preview's MIME type or file type
+                  const previewMimeType = preview?.mimeType || mimeType;
+                  const previewIsImage = previewMimeType.startsWith("image/") || 
+                                        (preview && detectFileType(file.filename, previewMimeType).isImage);
+                  const previewIsText = previewMimeType.startsWith("text/") || 
+                                       previewMimeType === "application/json" ||
+                                       previewMimeType === "application/javascript" ||
+                                       previewMimeType === "application/xml" ||
+                                       previewMimeType === "application/x-sh" ||
+                                       previewMimeType === "application/x-yaml" ||
+                                       previewMimeType === "application/yaml" ||
+                                       (preview && detectFileType(file.filename, previewMimeType).isText);
+
+                  return (
+                    <div
+                      key={fileKey}
                     className="rounded-xl border bg-card p-4 space-y-2.5"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -1944,7 +2536,135 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                           {file.filename || file.path || "Unknown file"}
                         </span>
                       </div>
+                        {(preview?.publicUrl || filePublicUrls.get(fileKey)) && (
+                          <a
+                            href={preview?.publicUrl || filePublicUrls.get(fileKey)}
+                            download={file.filename || file.path || "download"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center rounded-md border bg-background px-2 py-1 text-xs font-medium text-primary shadow-sm hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <Download className="mr-1 h-3 w-3" />
+                            Download
+                          </a>
+                        )}
                     </div>
+
+                      {/* Preview Section */}
+                      {preview && (
+                        <div className="mt-3 border-t pt-3">
+                          {preview.isLoading && (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                Loading preview...
+                              </span>
+                            </div>
+                          )}
+                          {preview.error && (
+                            <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2">
+                              <div className="text-xs text-destructive">
+                                Preview error: {preview.error}
+                              </div>
+                            </div>
+                          )}
+                          {!preview.isLoading && !preview.error && preview.content && (
+                            <>
+                              {previewIsImage && (() => {
+                                // If content is a URL (publicUrl), use it directly
+                                if (preview.isUrl) {
+                                  return (
+                                    <div className="rounded-lg border bg-muted overflow-hidden">
+                                      <img
+                                        src={preview.content}
+                                        alt={file.filename || "Preview"}
+                                        className="w-full h-auto max-h-64 object-contain"
+                                        onError={(e) => {
+                                          console.error("[UI] Failed to load image preview from URL", {
+                                            fileKey,
+                                            filename: file.filename,
+                                            url: preview.content,
+                                            mimeType: previewMimeType,
+                                          });
+                                          e.currentTarget.style.display = "none";
+                                        }}
+                                        onLoad={() => {
+                                          console.debug("[UI] Image preview loaded successfully from URL", {
+                                            fileKey,
+                                            filename: file.filename,
+                                            mimeType: previewMimeType,
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                }
+                                
+                                // Otherwise, treat as base64 content
+                                // Clean base64 string: remove whitespace and ensure it's valid
+                                let base64Content = preview.content;
+                                if (typeof base64Content === 'string') {
+                                  // Remove any whitespace characters (spaces, newlines, etc.)
+                                  base64Content = base64Content.replace(/\s/g, '');
+                                }
+                                
+                                // Validate base64 format
+                                const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+                                const isValidBase64 = base64Regex.test(base64Content);
+                                
+                                if (!isValidBase64) {
+                                  console.error("[UI] Invalid base64 content for image preview", {
+                                    fileKey,
+                                    filename: file.filename,
+                                    mimeType: previewMimeType,
+                                    contentLength: base64Content.length,
+                                    contentPreview: base64Content.substring(0, 50),
+                                  });
+                                }
+                                
+                                const dataUrl = `data:${previewMimeType};base64,${base64Content}`;
+                                
+                                return (
+                                  <div className="rounded-lg border bg-muted overflow-hidden">
+                                    <img
+                                      src={dataUrl}
+                                      alt={file.filename || "Preview"}
+                                      className="w-full h-auto max-h-64 object-contain"
+                                      onError={(e) => {
+                                        console.error("[UI] Failed to load image preview", {
+                                          fileKey,
+                                          filename: file.filename,
+                                          mimeType: previewMimeType,
+                                          contentLength: base64Content.length,
+                                          isValidBase64,
+                                          dataUrlPreview: dataUrl.substring(0, 100),
+                                        });
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                      onLoad={() => {
+                                        console.debug("[UI] Image preview loaded successfully", {
+                                          fileKey,
+                                          filename: file.filename,
+                                          mimeType: previewMimeType,
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })()}
+                              {previewIsText && !previewIsImage && (
+                                <div className="rounded-lg border bg-muted p-3 max-h-64 overflow-auto">
+                                  <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+                                    {preview.content.length > 2000
+                                      ? preview.content.substring(0, 2000) + "\n\n... (truncated)"
+                                      : preview.content}
+                                  </pre>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       {file.mimeType && (
@@ -1991,9 +2711,28 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                           </div>
                         </div>
                       )}
+                        {(preview?.publicUrl || filePublicUrls.get(fileKey)) && (
+                          <div className="col-span-2">
+                            <span className="text-xs text-muted-foreground">
+                              Public URL
+                            </span>
+                            <div className="mt-1">
+                              <a
+                                href={preview?.publicUrl || filePublicUrls.get(fileKey)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1 break-all"
+                              >
+                                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{preview?.publicUrl || filePublicUrls.get(fileKey)}</span>
+                              </a>
                     </div>
                   </div>
-                ))}
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

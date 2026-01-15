@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/badge/Next.js-15+-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
     <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
     <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
-    <img src="https://img.shields.io/badge/Acontext-FF6B6B?style=for-the-badge" alt="Acontext" />
+    <a href="https://acontext.io"><img src="https://assets.memodb.io/Acontext/badge-made-with-acontext.svg" alt="Made with Acontext" /></a>
   </p>
 </div>
 
@@ -307,6 +307,9 @@ See the [Customization Guide](#adding-custom-tools) section above.
 | `OPENAI_LLM_TEMPERATURE` | Temperature (0-2) | No (default: 0.7) |
 | `OPENAI_LLM_MAX_TOKENS` | Max tokens in response | No (default: 2000) |
 | `BROWSER_USE_API_KEY` | Browser Use Cloud API key | No (optional) |
+| `IMAGE_GEN_API_KEY` | Upstream image generation API key (sent as `x-goog-api-key`) | No (optional, required for image_generate) |
+| `IMAGE_GEN_BASE_URL` | Upstream image generation base URL | No (default: `https://api.openai-next.com`) |
+| `IMAGE_GEN_DEFAULT_MODEL` | Image generation model name (server-controlled; not overridable by tool args) | No (default: `gemini-3-pro-image-preview`) |
 
 ## 🚢 Deployment
 

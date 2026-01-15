@@ -36,6 +36,34 @@ export function maskSensitiveInfo(message: string): string {
 }
 
 /**
+ * Masks a token/API key by showing only the first and last few characters
+ * Example: "sk-1234567890abcdef" -> "sk-1234...cdef"
+ * 
+ * @param token - The token to mask
+ * @param visiblePrefix - Number of characters to show at the start (default: 6)
+ * @param visibleSuffix - Number of characters to show at the end (default: 4)
+ * @returns Masked token string
+ */
+export function maskToken(
+  token: string | undefined | null,
+  visiblePrefix: number = 6,
+  visibleSuffix: number = 4
+): string {
+  if (!token || token.length === 0) {
+    return "***";
+  }
+
+  // If token is too short, just mask it completely
+  if (token.length <= visiblePrefix + visibleSuffix) {
+    return "*".repeat(Math.min(token.length, 8));
+  }
+
+  const prefix = token.substring(0, visiblePrefix);
+  const suffix = token.substring(token.length - visibleSuffix);
+  return `${prefix}...${suffix}`;
+}
+
+/**
  * Formats error for API response
  */
 export function formatErrorResponse(

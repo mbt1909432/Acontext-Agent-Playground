@@ -25,10 +25,12 @@ import {
 import { getAcontextDiskToolSchemas } from "@/lib/acontext-disk-tools";
 import { getExperienceSearchToolSchema } from "@/lib/acontext-experience-search-tool";
 import { getTodoToolSchema } from "@/lib/acontext-todo-tool";
+import { getImageGenerateToolSchema } from "@/lib/acontext-image-generate-tool";
 import {
   formatErrorResponse,
   ErrorCodes,
   maskSensitiveInfo,
+  maskToken,
 } from "@/lib/chat-errors";
 import type { ChatRequest, ChatResponse } from "@/types/chat";
 
@@ -154,10 +156,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (body.message.length > 10000) {
+    if (body.message.length > 100000) {
       return NextResponse.json(
         formatErrorResponse(
-          new Error("Message is too long (max 10000 characters)"),
+          new Error("Message is too long (max 100000 characters)"),
           false
         ),
         { status: 400 }
@@ -168,6 +170,14 @@ export async function POST(request: NextRequest) {
     let llmConfig;
     try {
       llmConfig = getLLMConfig();
+      
+      // Log tokens (partially masked for security)
+      console.log("[Chatbot] API Tokens:", {
+        openaiApiKey: maskToken(llmConfig.apiKey),
+        acontextApiKey: maskToken(process.env.ACONTEXT_API_KEY),
+        browserUseApiKey: maskToken(process.env.BROWSER_USE_API_KEY),
+        imageGenApiKey: maskToken(process.env.IMAGE_GEN_API_KEY),
+      });
     } catch (error) {
       return NextResponse.json(
         formatErrorResponse(
@@ -322,11 +332,16 @@ Simple tasks (1-2 steps) don't require todo tool, but complex tasks MUST use it.
       });
 
     // Add existing messages
-    // Note: existingMessages from DB always have string content
+    // Preserve Vision API format (array) for images so they can be used as context
     existingMessages.forEach((msg) => {
       messages.push({
         role: msg.role,
-        content: typeof msg.content === "string" ? msg.content : String(msg.content),
+        // Preserve array format for Vision API, convert other types to string
+        content: Array.isArray(msg.content) 
+          ? msg.content 
+          : typeof msg.content === "string" 
+            ? msg.content 
+            : String(msg.content),
       });
     });
 
@@ -397,52 +412,31 @@ Simple tasks (1-2 steps) don't require todo tool, but complex tasks MUST use it.
     }
 
     // Store user message in Acontext (messages are now stored only in Acontext)
-    // IMPORTANT: For messages with images, don't store the base64 data (it causes token explosion)
-    // Instead, store a placeholder reference to avoid storing massive base64 strings
-    let userMessageContent: string;
+    // For messages with images, store the complete Vision API format so images can be used as context
     const lastMessage = messages[messages.length - 1];
     
-    if (Array.isArray(lastMessage?.content)) {
-      // This is a Vision API message with images
-      // Extract text parts and create a placeholder for images instead of storing base64
-      const textParts: string[] = [];
-      const imageCount = lastMessage.content.filter(
-        (part: any) => part.type === "image_url"
-      ).length;
-      
-      lastMessage.content.forEach((part: any) => {
-        if (part.type === "text") {
-          textParts.push(part.text);
-        }
-      });
-      
-      // Create a compact representation: text + image placeholders
-      let compactContent = textParts.join(" ").trim();
-      if (imageCount > 0) {
-        const imagePlaceholders = attachmentInfo
-          .filter((att) => att.mimeType.startsWith("image/"))
-          .map((att) => `[Image: ${att.filename}]`)
-          .join(" ");
-        compactContent = compactContent
-          ? `${compactContent} ${imagePlaceholders}`
-          : imagePlaceholders;
-      }
-      
-      userMessageContent = compactContent || body.message;
-    } else {
-      // Regular text message
-      userMessageContent =
-        typeof lastMessage?.content === "string"
-          ? lastMessage.content
-      : body.message;
-    }
-    
     if (acontextSessionId) {
-      await storeMessageInAcontext(
-        acontextSessionId,
-        "user",
-        userMessageContent
-      );
+      // Store the complete message content (including images in Vision API format)
+      // This allows images to be used as context in subsequent messages
+      if (Array.isArray(lastMessage?.content)) {
+        // Store Vision API format directly (array with text and image_url)
+        await storeMessageInAcontext(
+          acontextSessionId,
+          "user",
+          lastMessage.content
+        );
+      } else {
+        // Regular text message
+        const userMessageContent =
+          typeof lastMessage?.content === "string"
+            ? lastMessage.content
+            : body.message;
+        await storeMessageInAcontext(
+          acontextSessionId,
+          "user",
+          userMessageContent
+        );
+      }
     }
 
     // Create OpenAI client
@@ -455,6 +449,7 @@ Simple tasks (1-2 steps) don't require todo tool, but complex tasks MUST use it.
           getExperienceSearchToolSchema,
           getTodoToolSchema,
           getBrowserUseToolSchema,
+          getImageGenerateToolSchema,
           ...getAcontextDiskToolSchemas(),
         ]
       : [];

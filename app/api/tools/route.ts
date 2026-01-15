@@ -3,6 +3,7 @@ import { getBrowserUseToolSchema } from "@/lib/browser-use";
 import { getAcontextDiskToolSchemas } from "@/lib/acontext-disk-tools";
 import { getExperienceSearchToolSchema } from "@/lib/acontext-experience-search-tool";
 import { getTodoToolSchema } from "@/lib/acontext-todo-tool";
+import { getImageGenerateToolSchema } from "@/lib/acontext-image-generate-tool";
 
 type ToolParameter = {
   name: string;
@@ -27,6 +28,7 @@ export async function GET() {
       getExperienceSearchToolSchema,
       getTodoToolSchema,
       getBrowserUseToolSchema,
+      getImageGenerateToolSchema,
       ...getAcontextDiskToolSchemas(),
     ];
 

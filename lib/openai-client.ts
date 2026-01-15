@@ -17,6 +17,47 @@ import {
   runTodo,
   isTodoToolName,
 } from "@/lib/acontext-todo-tool";
+import {
+  runImageGenerate,
+  isImageGenerateToolName,
+} from "@/lib/acontext-image-generate-tool";
+
+function safeToolResultToMessageContent(
+  toolName: string,
+  toolCallId: string,
+  result: unknown,
+  maxBytes: number = 9_500_000 // stay under common 10MB/provider limits
+): string {
+  // We must ensure tool message content doesn't exceed provider limits,
+  // otherwise the *next* LLM call fails (e.g. 400 string too long).
+  let json = "";
+  try {
+    json = JSON.stringify(result ?? {});
+  } catch (e) {
+    json = JSON.stringify({
+      error: "Failed to stringify tool result",
+      toolName,
+      toolCallId,
+      reason: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  const bytes = Buffer.byteLength(json, "utf8");
+  if (bytes <= maxBytes) return json;
+
+  // Build a small summary instead of sending the full payload.
+  const summary = {
+    truncated: true,
+    toolName,
+    toolCallId,
+    originalBytes: bytes,
+    maxBytes,
+    note:
+      "Tool result was too large to include in the conversation. Base64 blobs or large raw payloads were omitted. Refer to saved artifacts/disk outputs instead.",
+    preview: json.slice(0, 2000),
+  };
+  return JSON.stringify(summary);
+}
 
 
 /**
@@ -49,7 +90,9 @@ function messagesToOpenAIFormat(
       if (Array.isArray(msg.content)) {
         return {
           role: "user",
-          content: msg.content as any, // OpenAI accepts array for Vision API
+          // OpenAI accepts array for Vision API; avoid `any` to satisfy lint.
+          content:
+            msg.content as unknown as OpenAI.Chat.Completions.ChatCompletionContentPart[],
         };
       }
       return {
@@ -121,6 +164,11 @@ async function executeToolCall(
   if (isAcontextDiskToolName(name)) {
     const args = JSON.parse(argsJson || "{}");
     return executeAcontextDiskTool(name, args, diskId);
+  }
+
+  if (isImageGenerateToolName(name)) {
+    const args = JSON.parse(argsJson || "{}");
+    return runImageGenerate(args, diskId);
   }
 
   throw new Error(`Unknown tool: ${name}`);
@@ -304,7 +352,11 @@ export async function chatCompletion(
       ...toolResults.map((toolCall) => ({
         role: "tool" as const,
         tool_call_id: toolCall.id,
-        content: JSON.stringify(
+        content: safeToolResultToMessageContent(
+          toolCall.type === "function" && toolCall.function
+            ? toolCall.function.name
+            : "unknown",
+          toolCall.id,
           allToolCalls.find((tc) => tc.id === toolCall.id)?.result || {}
         ),
       })),
@@ -624,7 +676,13 @@ export async function* chatCompletionStream(
         return {
           role: "tool" as const,
           tool_call_id: toolCall.id,
-          content: JSON.stringify(toolCallResult),
+          content: safeToolResultToMessageContent(
+            toolCall.type === "function" && toolCall.function
+              ? toolCall.function.name
+              : "unknown",
+            toolCall.id,
+            toolCallResult
+          ),
         };
       }),
     ];
