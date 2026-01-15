@@ -36,18 +36,18 @@ export function ParallaxCharacter() {
           Horizontal position: lg:pl-[800px] (adjust left margin to place character on the right side of text) */}
       <div className="absolute inset-0 flex items-end justify-center lg:justify-start lg:items-start lg:pl-[800px] lg:pt-[00px]">
         <div 
-          className="relative w-full max-w-[500px] lg:max-w-[300px] xl:max-w-[750px] opacity-60 dark:opacity-40"
+          className="relative w-full max-w-[420px] lg:max-w-[360px] xl:max-w-[580px] opacity-100 dark:opacity-80"
           style={{
             transform: `translateY(${parallaxOffset}px)`,
             willChange: 'transform',
           }}
         >
           <Image
-            src="https://acontext.io/nav-logo-black.svg"
-            alt="Acontext Logo"
+            src="/fonts/ppt girl.png"
+            alt="PPT Girl"
             width={800}
-            height={600}
-            className="w-full h-auto object-contain dark:invert"
+            height={800}
+            className="w-full h-auto object-contain rounded-3xl shadow-[0_40px_120px_rgba(0,0,0,0.0)]"
             priority
           />
         </div>

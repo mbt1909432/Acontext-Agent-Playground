@@ -17,19 +17,20 @@ export default function ProtectedLayout({
         <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between px-6 lg:px-12">
           <div className="flex items-center gap-3">
             <Link
-              href="https://acontext.io/"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/"
               className="flex items-center gap-2"
             >
               <Image
-                src="https://acontext.io/nav-logo-black.svg"
-                alt="Acontext"
-                width={120}
-                height={32}
-                className="h-6 w-auto dark:invert"
+                src="/fonts/ppt girl.png"
+                alt="PPT Girl"
+                width={100}
+                height={100}
+                className="h-8 w-8 rounded-full border border-primary/40 shadow-sm object-cover object-top"
                 priority
               />
+              <span className="text-sm font-semibold tracking-tight">
+                PPT Girl
+              </span>
             </Link>
             <Link href="/">
               <Button variant="ghost" size="sm">

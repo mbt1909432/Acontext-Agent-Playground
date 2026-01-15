@@ -19,6 +19,21 @@ interface ChatbotPanelProps {
    * When true, renders a full-page chat experience instead of a floating widget.
    */
   fullPage?: boolean;
+  /**
+   * Optional custom system prompt/persona to send to the backend.
+   * If omitted, the default Aria Context prompt on the server is used.
+   */
+  systemPrompt?: string;
+  /**
+   * Optional assistant display name (used in the chat UI).
+   * Defaults to "Acontext Worker".
+   */
+  assistantName?: string;
+  /**
+   * Optional assistant avatar image src (Next.js Image src).
+   * Defaults to the Acontext logo.
+   */
+  assistantAvatarSrc?: string;
 }
 
 type AvailableTool = {
@@ -506,7 +521,13 @@ function ToolCallsDisplay({ toolCalls, isFullPage = false }: { toolCalls: ToolIn
   );
 }
 
-export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps) {
+export function ChatbotPanel({
+  className,
+  fullPage = false,
+  systemPrompt,
+  assistantName = "PPT Girl",
+  assistantAvatarSrc = "/fonts/ppt_girl_chatbot.png",
+}: ChatbotPanelProps) {
   const [isOpen, setIsOpen] = useState(fullPage);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -1462,6 +1483,8 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
             role: m.role,
             content: m.content,
           })),
+          // Optional custom system prompt/persona for specialized agents (e.g., PPT agent)
+          systemPrompt: systemPrompt || undefined,
           enabledToolNames: enabledToolsForRequest,
           stream: true, // Enable streaming for Browser Use tasks
           attachments: attachmentsForAPI.length > 0 ? attachmentsForAPI : undefined,
@@ -2266,14 +2289,14 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                 }`}
               >
                 {message.role === "assistant" && (
-                  <div className="flex-shrink-0 w-20 h-20">
-                  <div className="relative w-full h-full rounded-full border-2 border-border overflow-hidden bg-white">
+                  <div className="flex-shrink-0 w-24 h-24">
+                    <div className="relative w-full h-full rounded-full border-2 border-border overflow-hidden bg-white">
                       <Image
-                        src="https://acontext.io/nav-logo-black.svg"
-                        alt="Acontext Worker"
+                        src={assistantAvatarSrc}
+                        alt={assistantName}
                         fill
-                        sizes="80px"
-                        className="object-contain p-3"
+                        sizes="90px"
+                        className="object-cover"
                         priority
                       />
                     </div>
@@ -2281,7 +2304,7 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
                 )}
                 <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed border-l-2 bg-card">
                   <div className="mb-1.5 text-xs text-muted-foreground">
-                    {message.role === "user" ? "User" : "Acontext Worker"}
+                    {message.role === "user" ? "User" : assistantName}
                   </div>
                   <div className="text-sm leading-relaxed">
                     {renderMessageContent(message.content)}
@@ -2297,21 +2320,21 @@ export function ChatbotPanel({ className, fullPage = false }: ChatbotPanelProps)
             ))}
             {isLoading && (
               <div className="flex justify-start items-start gap-3 animate-fade-in">
-                <div className="flex-shrink-0 w-20 h-20">
+                <div className="flex-shrink-0 w-24 h-24">
                   <div className="relative w-full h-full rounded-full border-2 border-border overflow-hidden bg-white">
                     <Image
-                      src="https://acontext.io/nav-logo-black.svg"
-                      alt="Acontext Worker"
+                      src={assistantAvatarSrc}
+                      alt={assistantName}
                       fill
-                      sizes="80px"
-                      className="object-contain p-3"
+                      sizes="96px"
+                      className="object-cover"
                       priority
                     />
                   </div>
                 </div>
                 <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed border-l-2 bg-card">
                   <div className="mb-1.5 text-xs text-muted-foreground">
-                    Acontext Worker
+                    {assistantName}
                   </div>
                   <div className="text-sm leading-relaxed flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
