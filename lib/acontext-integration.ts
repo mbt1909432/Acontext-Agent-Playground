@@ -679,21 +679,29 @@ async function listArtifactsRecursive(
       // Extract metadata if available
       const artifactInfo = item.meta?.__artifact_info__;
       
-      // Build full path: if path is "/" and filename exists, combine them
-      // Otherwise use path as-is, or fall back to filename
+      // Build full path (directory + filename)
+      // Acontext dashboard 显示的是目录 + 文件名，比如：
+      //   path: "/generated/2026-01-15/"
+      //   filename: "image_xxx.jpg"
+      // 这里我们希望前端拿到的 path 就是完整路径："/generated/2026-01-15/image_xxx.jpg"
       let fullPath: string;
-      if (item.path === '/' && item.filename) {
-        // Path is root, combine with filename
-        fullPath = '/' + item.filename;
-      } else if (item.path && item.path !== '/') {
-        // Path is not root, use it as-is
-        fullPath = item.path;
-      } else if (item.filename) {
-        // No path or path is invalid, use filename
-        fullPath = '/' + item.filename;
+      const rawPath: string | undefined = item.path;
+      const rawFilename: string | undefined = item.filename;
+
+      if (rawPath && rawPath !== "/") {
+        const basePath = rawPath.endsWith("/") ? rawPath : `${rawPath}/`;
+        if (rawFilename) {
+          fullPath = `${basePath}${rawFilename}`;
+        } else {
+          // 目录项（没有 filename），保留目录路径本身
+          fullPath = basePath;
+        }
+      } else if (rawFilename) {
+        // 根目录下的文件："/file.ext"
+        fullPath = `/${rawFilename}`;
       } else {
-        // Fallback
-        fullPath = item.path || 'unknown';
+        // 两个都缺，就退回原始 path 或占位
+        fullPath = rawPath || "unknown";
       }
       
       // Extract size from metadata if available
@@ -711,7 +719,7 @@ async function listArtifactsRecursive(
       }
       
       // Infer MIME type from file extension if still generic or missing
-      const filename = item.filename || fullPath.split('/').pop() || '';
+      const filename = rawFilename || fullPath.split('/').pop() || '';
       if (mimeType === 'application/octet-stream' || !mimeType) {
         const ext = filename.split('.').pop()?.toLowerCase() || '';
         const mimeMap: Record<string, string> = {

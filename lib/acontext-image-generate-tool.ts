@@ -240,13 +240,32 @@ export async function runImageGenerate(
   console.log("[image-generate] Calling ai.models.generateContent", {
     model: generateContentParams.model,
     promptLength: generateContentParams.contents.length,
-    config: generateContentParams.config ? JSON.stringify(generateContentParams.config, null, 2) : null,
+    config: generateContentParams.config
+      ? JSON.stringify(generateContentParams.config, null, 2)
+      : null,
   });
 
-  // Call SDK
+  // Call SDK with a timeout to avoid hanging indefinitely on upstream issues
+  const timeoutMs =
+    (process.env.IMAGE_GEN_TIMEOUT_MS &&
+      Number.parseInt(process.env.IMAGE_GEN_TIMEOUT_MS, 10)) ||
+    120_000; // default 120s
+
   let response;
   try {
-    response = await ai.models.generateContent(generateContentParams);
+    const sdkPromise = ai.models.generateContent(generateContentParams);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(
+          new Error(
+            `Image generation API call timed out after ${timeoutMs}ms. ` +
+              "This usually indicates the IMAGE_GEN_BASE_URL service is unreachable or very slow."
+          )
+        );
+      }, timeoutMs);
+    });
+
+    response = await Promise.race([sdkPromise, timeoutPromise]);
   } catch (error) {
     console.error("[image-generate] SDK call failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -257,13 +276,19 @@ export async function runImageGenerate(
       generateContentParams: {
         model: generateContentParams.model,
         contentsLength: generateContentParams.contents.length,
-        config: generateContentParams.config ? JSON.stringify(generateContentParams.config, null, 2) : null,
+        config: generateContentParams.config
+          ? JSON.stringify(generateContentParams.config, null, 2)
+          : null,
       },
+      timeoutMs,
     });
-    
+
     // Re-throw with more context
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Image generation API call failed: ${errorMessage}. Check IMAGE_GEN_API_KEY and IMAGE_GEN_BASE_URL configuration.`);
+    throw new Error(
+      `Image generation API call failed: ${errorMessage}. ` +
+        "Check IMAGE_GEN_API_KEY, IMAGE_GEN_BASE_URL, network connectivity, and the upstream image service status."
+    );
   }
 
   // Extract parts from response

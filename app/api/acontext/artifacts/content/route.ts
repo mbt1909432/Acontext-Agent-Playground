@@ -97,6 +97,21 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Detect directory paths (ending with /) - these should not be requested as files
+      if (filePath.endsWith("/")) {
+        console.warn("[API] /artifacts/content metaOnly: filePath is a directory, not a file", {
+          filePath,
+          diskId: targetDiskId,
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            error: "filePath is a directory, not a file. Use list API to list directory contents.",
+          },
+          { status: 400 }
+        );
+      }
+
       // Parse path into directory + filename ("/dir/file.png" → { "/", "file.png" })
       const pathParts = filePath.split("/").filter((part) => part.length > 0);
       if (pathParts.length === 0) {
@@ -116,12 +131,32 @@ export async function GET(request: NextRequest) {
       const filePathDir =
         pathParts.length > 1 ? "/" + pathParts.slice(0, -1).join("/") : "/";
 
-      const artifactsGetResult = await acontext.disks.artifacts.get(targetDiskId, {
-        filePath: filePathDir,
+      console.log("[API] /artifacts/content metaOnly: Parsed filePath", {
+        originalFilePath: filePath,
+        filePathDir,
         filename,
-        withContent: false,
-        withPublicUrl: true,
+        diskId: targetDiskId,
       });
+
+      let artifactsGetResult;
+      try {
+        artifactsGetResult = await acontext.disks.artifacts.get(targetDiskId, {
+          filePath: filePathDir,
+          filename,
+          withContent: false,
+          withPublicUrl: true,
+        });
+      } catch (apiError) {
+        console.error("[API] /artifacts/content metaOnly: artifacts.get failed", {
+          diskId: targetDiskId,
+          filePathDir,
+          filename,
+          originalFilePath: filePath,
+          error: apiError instanceof Error ? apiError.message : String(apiError),
+          errorStack: apiError instanceof Error ? apiError.stack : undefined,
+        });
+        throw apiError;
+      }
 
       if (!artifactsGetResult || !artifactsGetResult.artifact) {
         return NextResponse.json(
