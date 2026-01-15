@@ -23,8 +23,8 @@ export default function Home() {
         <nav className="relative border-b bg-card/50 backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/60">
           <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-12">
             <div className="flex items-center gap-3">
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="flex items-center gap-2"
               >
                 <Image
@@ -36,14 +36,14 @@ export default function Home() {
                   priority
                 />
                 <span className="text-lg font-semibold tracking-tight">
-                  PPT Girl
+                  Acontext PPT Girl
                 </span>
               </Link>
             </div>
 
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground hidden sm:inline-block">
-                AI slide designer for beautiful PPT-style decks
+                Acontext-based AI slide generator for beautiful PPT-style decks
               </span>
               <Suspense>
                 <AuthButton />
@@ -60,23 +60,22 @@ export default function Home() {
               {/* Tag */}
               <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 <Badge variant="secondary" className="text-sm sm:text-base">
-                  PPT Girl · AI Slide Designer
+                  Acontext PPT Girl · AI Slide Generator
                 </Badge>
               </div>
 
               {/* Main headline */}
               <div className="space-y-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
                 <h1 className="text-5xl font-bold leading-tight sm:text-6xl md:text-7xl lg:text-8xl">
-                  <span className="block text-primary">PPT Girl</span>
-                  <span className="block">Slide</span>
-                  <span className="block text-primary">Generator</span>
+                  <span className="block text-primary">Acontext</span>
+                  <span className="block">PPT Girl</span>
+                  <span className="block text-primary">Slide Generator</span>
                 </h1>
                 
                 <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl lg:text-2xl">
-                  Turn any long text into clean, professional PPT-style slides,
-                  guided by an anime nurse girl assistant. Outline your deck,
-                  confirm the structure, then auto-generate slide-ready images
-                  with 16:9 layouts and space for your content.
+                  Turn any long text into clean, professional PPT-style slides with the Acontext PPT Girl Slide Generator.
+                  Built on Acontext, it helps you outline your deck, confirm the structure, and auto-generate slide-ready
+                  images with 16:9 layouts and space for your content.
                 </p>
               </div>
 
@@ -85,8 +84,8 @@ export default function Home() {
                 <Card className="bg-primary/10 border-primary/30 backdrop-blur-sm shadow-lg dark:bg-neutral-900/70 dark:border-neutral-800 dark:shadow-[0_30px_80px_-50px_rgba(0,0,0,0.9)]">
                   <CardContent className="pt-6">
                     <p className="text-base sm:text-lg font-medium text-foreground leading-relaxed mb-4">
-                      Paste your content, let PPT Girl propose a slide outline, then approve to auto-generate consistent,
-                      on-brand slide visuals for each page of your deck.
+                      Paste your content, let Acontext PPT Girl propose a slide outline, then approve to auto-generate
+                      consistent, on-brand slide visuals for each page of your deck.
                     </p>
                     <p className="text-sm sm:text-base text-muted-foreground">
                       Every image is optimized for 16:9 PPT slides, keeping PPT Girl in the background so your text stays readable.
@@ -142,14 +141,14 @@ export default function Home() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl sm:text-2xl">
-                      Example PPT Girl Flow
+                      Example Acontext PPT Girl Flow
                     </CardTitle>
                     <Badge variant="secondary">Sample</Badge>
                   </div>
-                  <CardDescription className="text-sm sm:text-base mt-2">
-                    See how PPT Girl turns long-form content into a slide deck with
-                    outline confirmation and image generation.
-                  </CardDescription>
+                    <CardDescription className="text-sm sm:text-base mt-2">
+                      See how Acontext PPT Girl turns long-form content into a slide deck with outline confirmation and
+                      image generation.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
@@ -161,7 +160,7 @@ export default function Home() {
                     {
                       role: "PPT Girl",
                       content:
-                        "I will first propose a 10-slide outline with titles and bullet points. Once you confirm, I will generate 16:9 PPT-style images for each slide with space for your text.",
+                        "I will first propose a 10-slide outline with titles and bullet points. Once you confirm, I will generate 16:9 PPT-style images for each slide with space for your text, powered by Acontext.",
                       tools: "image_generate x10",
                     },
                   ].map((msg, i) => (
@@ -209,11 +208,11 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="relative border-t bg-card/50 backdrop-blur-sm py-6 sm:py-8">
+                <footer className="relative border-t bg-card/50 backdrop-blur-sm py-6 sm:py-8">
           <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-12">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
-                © 2026 PPT Girl Slide Generator
+                © 2026 Acontext PPT Girl Slide Generator
               </p>
             </div>
           </div>
