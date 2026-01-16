@@ -263,7 +263,7 @@ export async function chatCompletion(
     console.log(`[chatCompletion] Iteration ${iteration}/${maxIterations}`);
 
     const completionParams: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
-      model: config.model || "gpt-3.5-turbo",
+      model: config.model || "gpt-4.1",
       messages: currentMessages,
       temperature: config.temperature || 0.7,
       max_tokens: config.maxTokens || 1000,
@@ -414,7 +414,7 @@ export async function* chatCompletionStream(
     console.log(`[chatCompletionStream] Iteration ${iteration}/${maxIterations}`);
 
     const completionParams: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
-      model: config.model || "gpt-3.5-turbo",
+      model: config.model || "gpt-4.1",
       messages: currentMessages,
       temperature: config.temperature || 0.7,
       max_tokens: config.maxTokens || 1000,

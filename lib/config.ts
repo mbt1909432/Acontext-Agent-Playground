@@ -27,7 +27,7 @@ export function getLLMConfig(): LLMConfig {
   return {
     endpoint,
     apiKey,
-    model: process.env.OPENAI_LLM_MODEL || "gpt-3.5-turbo",
+    model: process.env.OPENAI_LLM_MODEL || "gpt-4.1",
     temperature: process.env.OPENAI_LLM_TEMPERATURE
       ? parseFloat(process.env.OPENAI_LLM_TEMPERATURE)
       : 0.7,
