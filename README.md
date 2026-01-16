@@ -20,43 +20,144 @@
     <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
     <a href="https://acontext.io"><img src="https://assets.memodb.io/Acontext/badge-made-with-acontext.svg" alt="Made with Acontext" /></a>
   </p>
+  
+  <p align="center">
+    <img src="./public/fonts/ppt girl.png" alt="PPT Girl - Homepage Character" width="300" />
+    &nbsp;&nbsp;&nbsp;
+    <img src="./public/fonts/ppt_girl_chatbot.png" alt="PPT Girl - Chatbot Avatar" width="200" />
+  </p>
 </div>
 
 <br/>
 
-**Acontext PPT Girl Slide Generator** is a specialized experience built on top of the **ACONTEXT Agent Playground** starter template, powered by [Acontext](https://acontext.io). This branch focuses on a PPT-style slide generator guided by an anime nurse assistant ("PPT Girl"), while still keeping all the original authentication, chat interface, tool integration, and session management features from the base template.
+**Acontext PPT Girl Slide Generator** is an intelligent PPT slide generation system powered by [Acontext](https://acontext.io). Simply chat with **"PPT Girl"** (an AI assistant) about your presentation topic, and she will automatically create a series of beautiful, cyberpunk-style slide images ready for your presentation.
 
-## 🚀 What is This?
+## 🎯 Core Functionality
 
-This is a **PPT slide generator demo** that inherits the powerful capabilities of the **Acontext platform** and the underlying Agent Playground template, including:
+### What Does It Do?
 
-- **Session Management**: Persistent conversation sessions with automatic context management
-- **Semantic Search**: Intelligent retrieval of relevant conversation history
-- **File & Artifact Management**: Upload, store, and manage files through Acontext Disk
-- **Experience Learning**: Search and reuse learned skills from user Spaces
-- **Context Compression**: Automatic token management and context optimization
-- **Tool Integration**: Extensible tool system for custom functionality
+**Transform text into professional PPT slides** through natural conversation:
+
+1. **📝 Input**: You provide presentation content (text, paragraphs, topics, or outlines)
+2. **🧠 Planning**: PPT Girl analyzes your content and proposes a slide-by-slide outline (titles + bullet points)
+3. **✏️ Review**: You review and confirm the outline
+4. **🎨 Generation**: PPT Girl generates 16:9 cyberpunk-style slide images using AI image generation
+5. **📦 Delivery**: Each slide image is automatically stored and accessible via URLs
+
+### Key Features of PPT Generation
+
+- **🎨 Consistent Visual Style**: All slides share a unified cyberpunk aesthetic (neon lights, holographic effects, futuristic backgrounds)
+- **📐 Smart Layout**: Clean, professional layouts with ample space for text overlays
+- **🔄 Interactive Workflow**: Confirm outlines before generation, iterate on specific slides
+- **💾 Automatic Storage**: All generated slides are stored in Acontext Disk for easy access
+- **🧠 Context Awareness**: Remembers your previous slides and maintains visual consistency across sessions
+
+## 🤔 Why Acontext? The Key Integration Benefits
+
+**Acontext is not optional** - it's what makes this PPT generator intelligent and practical. Here's why:
+
+### 1. **Persistent Memory for Multi-Slide Presentations** 🧠
+**Problem**: Generating a full presentation requires multiple rounds of conversation. Without memory, the AI would forget:
+- What slides were already created
+- The visual style and theme you agreed upon
+- The overall structure of your presentation
+
+**Solution with Acontext**: Every chat session persists to an Acontext Session. PPT Girl remembers:
+- All previously generated slides in your current presentation
+- Your preferences (e.g., "use more purple tones", "make slides simpler")
+- The presentation structure and context
+
+**Real Impact**: You can say "add one more slide about pricing" or "make slide 3 more detailed" - and PPT Girl knows exactly which slide you're referring to.
+
+### 2. **Semantic Search for Style Consistency** 🔍
+**Problem**: When generating multiple slides, maintaining visual consistency is challenging. You might want:
+- All slides to share similar color schemes
+- Consistent background elements
+- Similar layouts across related slides
+
+**Solution with Acontext**: Before generating each new slide, Acontext performs semantic search to retrieve:
+- Previous slide generation prompts
+- Your feedback and style preferences
+- Related slides from the same presentation
+
+**Real Impact**: When you say "make this slide match the style of the intro slide," PPT Girl can find and reference your earlier slides automatically.
+
+### 3. **Skill Learning for Better Results Over Time** 📈
+**Problem**: Every user has different preferences. Some like minimal designs, others prefer detailed backgrounds. Without learning, the AI starts from scratch each time.
+
+**Solution with Acontext**: Acontext Space learns from completed presentations:
+- Your preferred slide styles
+- Common patterns in your presentations (e.g., "you always include a conclusion slide")
+- Successful slide structures that worked well before
+
+**Real Impact**: The more presentations you create, the better PPT Girl understands your style. Your 10th presentation will be much more aligned with your preferences than your first.
+
+### 4. **Automatic File Management for Generated Slides** 📁
+**Problem**: Generated slide images need to be stored, organized, and easily accessible. Managing files manually is tedious and error-prone.
+
+**Solution with Acontext Disk**:
+- All generated slides are automatically stored in Acontext Disk
+- Each slide has a unique URL for easy sharing and embedding
+- Files are organized by session and date
+- No need to manually download or manage files
+
+**Real Impact**: You can view all your generated slides in one place, download them in bulk, or share individual slides instantly.
+
+### 5. **Context Compression for Long Presentations** 💾
+**Problem**: Creating a 20-slide presentation involves many messages, tool calls, and generated images. Without compression, the conversation context becomes too large for the LLM to process efficiently.
+
+**Solution with Acontext**: 
+- Automatic context compression when conversations get long
+- Important information (slide structures, confirmed outlines) is preserved
+- Less relevant intermediate messages are compressed or summarized
+
+**Real Impact**: You can create presentations of any length without hitting token limits or losing important context.
+
+### 6. **Cross-Session Intelligence** 🔄
+**Problem**: Without memory, each new conversation starts from zero. You can't reference slides from previous presentations or build upon past work.
+
+**Solution with Acontext**:
+- Search across all your previous presentations
+- Reference slides from past sessions
+- Build upon existing slide libraries
+
+**Real Impact**: "Create a presentation similar to the one I made last week" becomes possible. PPT Girl can find and reference your previous work.
+
+---
+
+**Bottom Line**: Acontext transforms PPT Girl from a "one-shot slide generator" into an **intelligent presentation assistant** that learns your preferences, maintains context across sessions, and delivers increasingly better results over time.
 
 ## ✨ Features
 
-### Core Capabilities
+### 🎨 PPT Slide Generation (Core Feature)
+
+- **🤖 AI-Powered Generation**: Natural language conversation with PPT Girl to create professional slides
+- **📋 Smart Outline Planning**: Automatically breaks down content into logical slide structure (titles + bullets)
+- **🎨 Cyberpunk Visual Style**: Consistent, futuristic aesthetic with neon lights and holographic effects
+- **📐 Professional Layouts**: Clean, 16:9 layouts optimized for text overlays and content
+- **🔄 Interactive Workflow**: Review and confirm outlines before generation; iterate on individual slides
+- **🖼️ Image Generation Tool**: Seamless integration with AI image generation APIs
+- **💾 Automatic Storage**: Generated slides stored in Acontext Disk with shareable URLs
+- **📊 Multi-Slide Support**: Generate entire presentations with consistent style across all slides
+
+### 💬 Chat & Interface
 
 - **🔐 Authentication**: Email/password authentication with Supabase
-- **💬 Chat Interface**: Full-featured chat UI with message history, streaming responses, and tool call visualization
+- **💬 Rich Chat UI**: Full-featured chat interface with message history, streaming responses, and tool call visualization
 - **🎨 Customizable UI**: Built with Tailwind CSS and shadcn/ui components - fully customizable
-- **🤖 Avatar Support**: Easy to customize agent avatar and branding
-- **🛠️ Extensible Tools**: Add your own custom tools or modify existing ones
-- **📁 File Upload**: Support for uploading PDFs, images, and documents
-- **🌐 Browser Automation**: Integrated Browser Use SDK for web automation tasks
+- **🤖 Avatar Support**: Customizable agent avatar (PPT Girl character included)
+- **📁 File Upload**: Support for uploading PDFs, images, and documents for context
+- **🌐 Browser Automation**: Integrated Browser Use SDK for web automation tasks (optional)
 - **🌓 Theme Support**: Dark/light mode with next-themes
 
-### Acontext Integration
+### 🧠 Acontext-Powered Intelligence
 
-- **Session Persistence**: Each chat session maps to an Acontext Session
-- **Semantic Context Search**: Automatically retrieves relevant historical context before generating responses
-- **Disk Storage**: Files are stored in Acontext Disk with automatic tool access
-- **Experience Search**: Leverages learned skills from user Spaces to improve responses
-- **Context Compression**: Automatic token management with manual compression option
+- **💾 Session Persistence**: Every chat session persists to Acontext Session - PPT Girl remembers your presentations
+- **🔍 Semantic Context Search**: Automatically retrieves relevant historical context (previous slides, style preferences) before generating responses
+- **📦 Disk Storage**: All generated slides automatically stored in Acontext Disk with organized access
+- **📈 Experience Learning**: Learns from your Space to understand your preferred slide styles and improve over time
+- **🗜️ Context Compression**: Automatic token management for long presentations with manual compression option
+- **🔄 Cross-Session Intelligence**: Reference slides from previous presentations and build upon past work
 
 ## 🛠️ Tech Stack
 
@@ -68,6 +169,86 @@ This is a **PPT slide generator demo** that inherits the powerful capabilities o
 - **UI Components**: Tailwind CSS, shadcn/ui, Lucide icons
 - **Language**: TypeScript
 - **Theming**: next-themes
+
+## 📖 Usage Example
+
+Here's a real conversation flow with PPT Girl:
+
+### Example 1: Creating a Product Launch Presentation
+
+**You**: "I need a presentation about our new AI chatbot product launch. It should cover: introduction, features, pricing, and next steps."
+
+**PPT Girl**: 
+> I'll help you create a presentation about your AI chatbot product launch. Let me propose a slide outline:
+> 
+> **Slide 1: Introduction**
+> - Welcome to the AI Chatbot Launch
+> - Revolutionizing customer support
+> 
+> **Slide 2: Key Features**
+> - 24/7 intelligent support
+> - Natural language understanding
+> - Multi-platform integration
+> 
+> **Slide 3: Pricing**
+> - Flexible pricing tiers
+> - Enterprise solutions available
+> 
+> **Slide 4: Next Steps**
+> - Sign up for early access
+> - Schedule a demo
+> 
+> Does this outline work for you? Should I proceed with generating the slide images?
+
+**You**: "Yes, looks good! Make the introduction slide more dramatic."
+
+**PPT Girl**: 
+> [Generates 4 slide images using image_generate tool]
+> 
+> ✅ **Slide 1: Introduction** (updated with more dramatic visuals)
+> 🖼️ Image: [URL to generated slide]
+> 
+> ✅ **Slide 2: Key Features**
+> 🖼️ Image: [URL to generated slide]
+> 
+> ✅ **Slide 3: Pricing**
+> 🖼️ Image: [URL to generated slide]
+> 
+> ✅ **Slide 4: Next Steps**
+> 🖼️ Image: [URL to generated slide]
+> 
+> Your presentation is ready! All slides have been saved and are accessible via the URLs above. You can download them or use them directly in your presentation software.
+
+### Example 2: Iterating on Slides
+
+**You** (in a later conversation): "I want to add one more slide about customer testimonials before the pricing slide."
+
+**PPT Girl** (remembers your previous presentation):
+> I'll add a testimonials slide between the features and pricing slides. Let me propose:
+> 
+> **Slide 3: Customer Testimonials**
+> - "Best chatbot we've ever used" - Company A
+> - "Reduced support tickets by 60%" - Company B
+> - "Easy to integrate" - Company C
+> 
+> Should I generate this slide with the same cyberpunk style to match your previous slides?
+
+**You**: "Yes, but use more purple tones to differentiate it slightly."
+
+**PPT Girl**:
+> [Generates the slide with purple-toned cyberpunk style]
+> 
+> ✅ **Slide 3: Customer Testimonials** (purple-toned, matching your previous style)
+> 🖼️ Image: [URL to generated slide]
+> 
+> Done! This slide will fit perfectly with your existing presentation.
+
+**Key Takeaway**: Notice how PPT Girl remembers:
+- Your previous presentation structure
+- The visual style you used
+- How to maintain consistency while allowing variations
+
+This intelligence comes from **Acontext's persistent memory and semantic search** - without it, PPT Girl would have no memory of your previous slides and couldn't maintain consistency.
 
 ## 📦 Getting Started
 
@@ -161,6 +342,12 @@ The UI is built with **Tailwind CSS** and **shadcn/ui** components, making it ea
 ### Customizing the Avatar
 
 The agent avatar can be customized in several ways. In this PPT Girl branch, a nurse-style anime character is already wired up as the default avatar.
+
+<div align="center">
+  <img src="./public/fonts/ppt girl.png" alt="PPT Girl - Homepage Character" width="300" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="./public/fonts/ppt_girl_chatbot.png" alt="PPT Girl - Chatbot Avatar" width="200" />
+</div>
 
 1. **Character Image**: Replace the image at `/public/fonts/ppt girl.png` with your own character/logo (keep the same filename to avoid code changes), or update `components/parallax-character.tsx` to point to a different path
 2. **Homepage Avatar**: The homepage hero section uses the parallax character component to display `ppt girl.png` floating beside the copy
