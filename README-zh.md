@@ -1,7 +1,7 @@
 <div align="center">
-  <h1 align="center">ACONTEXT Agent Playground</h1>
+  <h1 align="center">Acontext PPT Girl Slide Generator</h1>
   <p align="center">
-    <strong>用于构建上下文感知自主 AI 智能体的生产就绪启动模板</strong>
+    <strong>基于 Acontext Agent Playground 打造的 PPT 风格幻灯片生成体验</strong>
   </p>
   <p align="center">
     由 <a href="https://acontext.io"><strong>Acontext</strong></a> 驱动
@@ -24,11 +24,11 @@
 
 <br/>
 
-**ACONTEXT Agent Playground** 是一个生产就绪的启动模板，用于构建由 [Acontext](https://acontext.io) 驱动的上下文感知自主 AI 智能体。该模板提供了完整的认证、聊天界面、工具集成和会话管理功能，让您能够快速构建和自定义自己的 AI 智能体应用。
+**Acontext PPT Girl Slide Generator** 是基于 **ACONTEXT Agent Playground** 模板扩展出来的一个专用分支，用于演示由 [Acontext](https://acontext.io) 驱动的 PPT 风格幻灯片生成体验，主角是“PPT Girl” 护士风二次元角色助手。该分支在保留原有认证、聊天界面、工具集成和会话管理能力的基础上，重点展示如何围绕一个角色包装完整的 PPT 生成流程和 UI。
 
 ## 🚀 这是什么？
 
-这是一个**启动模板**，继承了 **Acontext 平台**的强大功能，包括：
+这是一个 **PPT 生成 Demo 分支**，继承了 **Acontext 平台** 和基础 Agent Playground 模板的强大功能，包括：
 
 - **会话管理**：具有自动上下文管理的持久对话会话
 - **语义搜索**：智能检索相关对话历史
@@ -160,16 +160,17 @@ UI 使用 **Tailwind CSS** 和 **shadcn/ui** 组件构建，易于自定义：
 
 ### 自定义头像
 
-智能体头像可以通过多种方式自定义：
+在本 PPT Girl 分支中，已经预置了一位护士风二次元角色作为默认头像，您也可以很方便地替换为自己的角色：
 
-1. **角色图片**：用您自己的角色/Logo 替换 `components/parallax-character.tsx`
-2. **首页头像**：更新视差角色组件或首页 hero 部分
-3. **聊天头像**：修改 `components/chatbot-panel.tsx` 中的头像显示
+1. **角色图片**：直接替换 `/public/fonts/ppt girl.png` 为您的角色图片（保持同名即可，无需改代码），或修改 `components/parallax-character.tsx` 中的图片路径
+2. **首页头像**：首页 hero 区域通过视差组件展示 `ppt girl.png`，如果想调整位置和大小，可编辑 `ParallaxCharacter` 组件
+3. **聊天头像**：如果希望在聊天界面也使用 PPT Girl，可在 `components/chatbot-panel.tsx` 中替换为 `/public/fonts/ppt_girl_chatbot.png` 或您自己的图片
 
 示例位置：
-- `components/parallax-character.tsx` - 首页视差角色
-- `public/acontext-character.png` - 角色资源
-- `app/page.tsx` - 首页布局
+- `components/parallax-character.tsx` - 首页视差角色（使用 `/fonts/ppt girl.png`）
+- `public/fonts/ppt girl.png` - 首页使用的 PPT Girl 人物 PNG 资源
+- `public/fonts/ppt_girl_chatbot.png` - 聊天头像的 PPT Girl 资源（可选）
+- `app/page.tsx` - 首页布局和 PPT Girl 相关文案
 
 ### 添加自定义工具
 

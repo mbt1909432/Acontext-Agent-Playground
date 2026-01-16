@@ -1,7 +1,7 @@
 <div align="center">
-  <h1 align="center">ACONTEXT Agent Playground</h1>
+  <h1 align="center">Acontext PPT Girl Slide Generator</h1>
   <p align="center">
-    <strong>A production-ready starter template for building context-aware, autonomous AI agents</strong>
+    <strong>A PPT-style slide generator experience built on the Acontext Agent Playground template</strong>
   </p>
   <p align="center">
     Powered by <a href="https://acontext.io"><strong>Acontext</strong></a>
@@ -24,11 +24,11 @@
 
 <br/>
 
-**ACONTEXT Agent Playground** is a production-ready starter template for building context-aware, autonomous AI agents powered by [Acontext](https://acontext.io). This template provides a complete foundation with authentication, chat interface, tool integration, and session management, allowing you to quickly build and customize your own AI agent applications.
+**Acontext PPT Girl Slide Generator** is a specialized experience built on top of the **ACONTEXT Agent Playground** starter template, powered by [Acontext](https://acontext.io). This branch focuses on a PPT-style slide generator guided by an anime nurse assistant ("PPT Girl"), while still keeping all the original authentication, chat interface, tool integration, and session management features from the base template.
 
 ## 🚀 What is This?
 
-This is a **start template** that inherits the powerful capabilities of the **Acontext platform**, including:
+This is a **PPT slide generator demo** that inherits the powerful capabilities of the **Acontext platform** and the underlying Agent Playground template, including:
 
 - **Session Management**: Persistent conversation sessions with automatic context management
 - **Semantic Search**: Intelligent retrieval of relevant conversation history
@@ -160,16 +160,17 @@ The UI is built with **Tailwind CSS** and **shadcn/ui** components, making it ea
 
 ### Customizing the Avatar
 
-The agent avatar can be customized in several ways:
+The agent avatar can be customized in several ways. In this PPT Girl branch, a nurse-style anime character is already wired up as the default avatar.
 
-1. **Character Image**: Replace `components/parallax-character.tsx` with your own character/logo
-2. **Homepage Avatar**: Update the parallax character component or homepage hero section
-3. **Chat Avatar**: Modify the avatar display in `components/chatbot-panel.tsx`
+1. **Character Image**: Replace the image at `/public/fonts/ppt girl.png` with your own character/logo (keep the same filename to avoid code changes), or update `components/parallax-character.tsx` to point to a different path
+2. **Homepage Avatar**: The homepage hero section uses the parallax character component to display `ppt girl.png` floating beside the copy
+3. **Chat Avatar**: Modify the avatar display in `components/chatbot-panel.tsx` if you also want PPT Girl (or another character) in the chat UI
 
 Example locations:
-- `components/parallax-character.tsx` - Homepage parallax character
-- `public/acontext-character.png` - Character assets
-- `app/page.tsx` - Homepage layout
+- `components/parallax-character.tsx` - Homepage parallax character (uses `/fonts/ppt girl.png`)
+- `public/fonts/ppt girl.png` - PPT Girl character asset used on the homepage
+- `public/fonts/ppt_girl_chatbot.png` - Optional PPT Girl asset for chatbot avatar
+- `app/page.tsx` - Homepage layout and PPT Girl landing copy
 
 ### Adding Custom Tools
 

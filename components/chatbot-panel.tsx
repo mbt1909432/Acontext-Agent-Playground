@@ -10,7 +10,7 @@ import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, X, Send, Loader2, Plus, ChevronDown, ChevronUp, Wrench, Trash2, Paperclip, File, FolderOpen, AlertTriangle, FileText, ExternalLink, Download } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Plus, ChevronDown, ChevronUp, Wrench, Trash2, Paperclip, File, FolderOpen, AlertTriangle, FileText, ExternalLink, Download, Heart, Sparkles } from "lucide-react";
 import type { ChatMessage, ChatResponse, ToolInvocation, ChatSession } from "@/types/chat";
 
 interface ChatbotPanelProps {
@@ -1848,13 +1848,16 @@ export function ChatbotPanel({
                   }`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    className={`max-w-[80%] rounded-xl px-4 py-2.5 shadow-sm transition-all duration-200 relative overflow-hidden group ${
                       message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                        ? "bg-primary text-primary-foreground hover:shadow-md"
+                        : "bg-muted border-l-4 border-primary/30"
                     }`}
                   >
-                    <div className="text-sm whitespace-pre-wrap">
+                    {message.role === "assistant" && (
+                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/60 to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                    <div className="text-sm whitespace-pre-wrap relative z-10">
                       {renderMessageContent(message.content)}
                     </div>
                     {message.toolCalls && message.toolCalls.length > 0 && (
@@ -1865,8 +1868,8 @@ export function ChatbotPanel({
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg px-4 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="bg-muted rounded-xl px-4 py-2.5 border-l-4 border-primary/30 shadow-sm">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   </div>
                 </div>
               )}
@@ -1886,7 +1889,7 @@ export function ChatbotPanel({
                 {attachments.map((attachment, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 rounded-lg border border-primary/50 bg-muted px-3 py-1.5"
+                    className="flex items-center gap-2 rounded-lg border-2 border-primary/40 bg-muted px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow"
                   >
                     {attachment.isTextFile ? (
                       <FileText className="h-3 w-3 text-primary" />
@@ -2042,9 +2045,9 @@ export function ChatbotPanel({
         <div className="mt-4 space-y-2 rounded-lg border bg-card px-4 py-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Status</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border bg-primary/10 px-2.5 py-1 text-xs text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Online
+            <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary shadow-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-slow" />
+              <span className="font-medium">Online</span>
             </span>
           </div>
           <div className="flex items-center justify-between border-t pt-2">
@@ -2064,13 +2067,14 @@ export function ChatbotPanel({
           {/* Top bar */}
           <div className="flex flex-col gap-2 border-b pb-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-              <div className="inline-flex items-center gap-2 border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span>Active Session</span>
+              <div className="inline-flex items-center gap-2 border-2 border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary rounded-full shadow-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-slow" />
+                <span className="font-medium">Active Session</span>
                 </div>
-              <h1 className="text-xl font-bold sm:text-2xl">
+              <h1 className="text-xl font-bold sm:text-2xl flex items-center gap-2">
                 <span className="text-primary">Ready</span>
                 <span className="text-foreground"> for Input</span>
+                <Heart className="h-5 w-5 text-primary/60 animate-pulse-slow hidden sm:inline-block" />
               </h1>
             </div>
 
@@ -2110,12 +2114,12 @@ export function ChatbotPanel({
                 size="icon"
                 onClick={handleManualCompress}
                 disabled={!sessionId || isCompressing}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
                 {isCompressing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
                 ) : (
-                  <span className="text-[10px]">C</span>
+                  <span className="text-[10px] text-primary">C</span>
                 )}
               </Button>
 
@@ -2125,9 +2129,9 @@ export function ChatbotPanel({
                 size="icon"
                 onClick={() => setIsToolsModalOpen(true)}
                 disabled={toolsError !== null}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
-                <Wrench className="h-3 w-3" />
+                <Wrench className="h-3 w-3 text-primary" />
               </Button>
 
               <Button
@@ -2135,9 +2139,9 @@ export function ChatbotPanel({
                 variant="outline"
                 size="icon"
                 onClick={handleOpenFilesModal}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
-                <FolderOpen className="h-3 w-3" />
+                <FolderOpen className="h-3 w-3 text-primary" />
               </Button>
 
               <Button
@@ -2146,12 +2150,12 @@ export function ChatbotPanel({
                 size="icon"
                 onClick={handlePing}
                 disabled={pingLoading}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
                 {pingLoading ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
                 ) : (
-                  <span className="text-[10px]">ping</span>
+                  <span className="text-[10px] text-primary">ping</span>
                 )}
               </Button>
 
@@ -2168,7 +2172,7 @@ export function ChatbotPanel({
                 <>
                   <button
                     type="button"
-                    className="border border-border bg-card px-2 py-1 rounded-md text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="border-2 border-primary/30 bg-card px-2 py-1 rounded-lg text-xs transition-all duration-200 hover:bg-primary/10 hover:border-primary/50 hover:shadow-sm font-medium"
                     onClick={() =>
                       setInput("Help me track the latest releases and funding rounds of several AI companies.")
                     }
@@ -2177,7 +2181,7 @@ export function ChatbotPanel({
                   </button>
                   <button
                     type="button"
-                    className="border border-border bg-card px-2 py-1 rounded-md text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="border-2 border-primary/30 bg-card px-2 py-1 rounded-lg text-xs transition-all duration-200 hover:bg-primary/10 hover:border-primary/50 hover:shadow-sm font-medium"
                     onClick={() =>
                       setInput("Check this requirements document for ambiguities and summarize the risks.")
                     }
@@ -2217,12 +2221,12 @@ export function ChatbotPanel({
                 size="sm"
                 onClick={handleManualCompress}
                 disabled={!sessionId || isCompressing}
-                className="text-xs h-7"
+                className="text-xs h-7 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
                 {isCompressing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
                 ) : (
-                  <span>Compress</span>
+                  <span className="text-primary">Compress</span>
                 )}
               </Button>
 
@@ -2232,10 +2236,10 @@ export function ChatbotPanel({
                 size="sm"
                 onClick={() => setIsToolsModalOpen(true)}
                 disabled={toolsError !== null}
-                className="text-xs h-7"
+                className="text-xs h-7 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
-                <Wrench className="h-3 w-3" />
-                <span>
+                <Wrench className="h-3 w-3 text-primary" />
+                <span className="text-primary">
                   {toolsError ? "Tools Unavailable" : `Tools ${totalTools || 0}`}
                 </span>
               </Button>
@@ -2245,10 +2249,10 @@ export function ChatbotPanel({
                 variant="outline"
                 size="sm"
                 onClick={handleOpenFilesModal}
-                className="text-xs h-7"
+                className="text-xs h-7 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
-                <FolderOpen className="h-3 w-3" />
-                <span>Files</span>
+                <FolderOpen className="h-3 w-3 text-primary" />
+                <span className="text-primary">Files</span>
               </Button>
 
               <Button
@@ -2257,12 +2261,12 @@ export function ChatbotPanel({
                 size="sm"
                 onClick={handlePing}
                 disabled={pingLoading}
-                className="text-xs h-7"
+                className="text-xs h-7 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
               >
                 {pingLoading ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
                 ) : (
-                  <span>ping</span>
+                  <span className="text-primary">ping</span>
                 )}
               </Button>
               {pingResponse && (
@@ -2276,21 +2280,28 @@ export function ChatbotPanel({
           {/* Messages area */}
           <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto pr-1 sm:space-y-4 sm:pr-2">
             {messages.length === 0 && (
-              <div className="py-12 text-center">
-                <div className="text-sm text-muted-foreground mb-2">System Ready</div>
-                <div className="text-xs text-muted-foreground">Type your question below or use a sample prompt to start.</div>
+              <div className="py-12 text-center animate-fade-in">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4 relative">
+                  <Heart className="h-10 w-10 text-primary animate-heartbeat" />
+                  <Sparkles className="h-5 w-5 text-primary/60 absolute -top-1 -right-1 animate-pulse-slow" />
+                </div>
+                <div className="text-sm font-medium text-primary mb-2">System Ready</div>
+                <div className="text-xs text-muted-foreground max-w-md mx-auto">
+                  Type your question below or use a sample prompt to start. I'm here to help! 💕
+                </div>
               </div>
             )}
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex items-start gap-3 ${
+                className={`flex items-start gap-3 animate-message-in ${
                   message.role === "user" ? "justify-end" : "justify-start"
                 }`}
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {message.role === "assistant" && (
                   <div className="flex-shrink-0 w-24 h-24">
-                    <div className="relative w-full h-full rounded-full border-2 border-border overflow-hidden bg-white">
+                    <div className="relative w-full h-full rounded-full border-[3px] border-primary/40 shadow-md overflow-hidden bg-white ring-2 ring-primary/10">
                       <Image
                         src={assistantAvatarSrc}
                         alt={assistantName}
@@ -2302,8 +2313,12 @@ export function ChatbotPanel({
                     </div>
                   </div>
                 )}
-                <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed border-l-2 bg-card">
-                  <div className="mb-1.5 text-xs text-muted-foreground">
+                <div className="max-w-[80%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed border-l-4 border-primary/30 bg-card shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/60 to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="mb-1.5 text-xs font-medium text-primary/80 flex items-center gap-1.5">
+                    {message.role === "assistant" && (
+                      <Heart className="h-3 w-3 text-primary/60 animate-pulse-slow" />
+                    )}
                     {message.role === "user" ? "User" : assistantName}
                   </div>
                   <div className="text-sm leading-relaxed">
@@ -2321,7 +2336,7 @@ export function ChatbotPanel({
             {isLoading && (
               <div className="flex justify-start items-start gap-3 animate-fade-in">
                 <div className="flex-shrink-0 w-24 h-24">
-                  <div className="relative w-full h-full rounded-full border-2 border-border overflow-hidden bg-white">
+                  <div className="relative w-full h-full rounded-full border-[3px] border-primary/40 shadow-md overflow-hidden bg-white ring-2 ring-primary/10 animate-fade-in">
                     <Image
                       src={assistantAvatarSrc}
                       alt={assistantName}
@@ -2332,8 +2347,10 @@ export function ChatbotPanel({
                     />
                   </div>
                 </div>
-                <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed border-l-2 bg-card">
-                  <div className="mb-1.5 text-xs text-muted-foreground">
+                <div className="max-w-[80%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed border-l-4 border-primary/30 bg-card shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/60 to-primary/20 animate-pulse-slow" />
+                  <div className="mb-1.5 text-xs font-medium text-primary/80 flex items-center gap-1.5">
+                    <Heart className="h-3 w-3 text-primary/60 animate-pulse-slow" />
                     {assistantName}
                   </div>
                   <div className="text-sm leading-relaxed flex items-center gap-2">
@@ -2358,10 +2375,10 @@ export function ChatbotPanel({
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((attachment, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 rounded-lg border border-primary/50 bg-card px-3 py-1.5"
-                >
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 rounded-lg border-2 border-primary/40 bg-card px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow"
+                  >
                   {attachment.isTextFile ? (
                     <FileText className="h-3 w-3 text-primary" />
                   ) : (
@@ -2385,12 +2402,12 @@ export function ChatbotPanel({
           )}
 
           {/* Input row */}
-          <div className="mt-2 flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+          <div className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/20 bg-card px-4 py-3 shadow-sm hover:border-primary/40 transition-all duration-200 focus-within:border-primary/60 focus-within:shadow-md">
             {messages.length === 0 && (
               <div className="hidden flex-wrap gap-2 text-xs text-muted-foreground md:flex">
                 <button
                   type="button"
-                  className="border border-border bg-card px-3 py-1.5 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="border-2 border-primary/30 bg-card px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-primary/10 hover:border-primary/50 hover:shadow-sm text-xs font-medium"
                   onClick={() =>
                     setInput("Help me track the latest releases and funding rounds of several AI companies.")
                   }
@@ -2399,7 +2416,7 @@ export function ChatbotPanel({
                 </button>
                 <button
                   type="button"
-                  className="border border-border bg-card px-3 py-1.5 rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="border-2 border-primary/30 bg-card px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-primary/10 hover:border-primary/50 hover:shadow-sm text-xs font-medium"
                   onClick={() =>
                     setInput("Check this requirements document for ambiguities and summarize the risks.")
                   }
@@ -2423,7 +2440,7 @@ export function ChatbotPanel({
               size="icon"
               variant="ghost"
               disabled={isLoading}
-              className="h-8 w-8"
+              className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-all duration-200"
             >
               <Paperclip className="h-4 w-4" />
             </Button>
@@ -2433,13 +2450,13 @@ export function ChatbotPanel({
               onKeyPress={handleKeyPress}
               placeholder="Send a message or describe the scenario you want to monitor..."
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 border-0 focus-visible:ring-2 focus-visible:ring-primary/30 bg-transparent"
             />
             <Button
               onClick={handleSend}
               disabled={(!input.trim() && attachments.length === 0) || isLoading}
               size="icon"
-              className="h-10 w-10"
+              className="h-10 w-10 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -15,58 +15,59 @@
 
 @layer base {
   :root {
-    /* Light theme tuned to the neutral dashboard palette */
-    --background: 210 24% 98%;
-    --foreground: 215 25% 15%;
+    /* Light theme tuned to PPT Girl nurse character: white + red theme */
+    --background: 0 0% 99%;
+    --foreground: 0 0% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 0 0% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 220 18% 22%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 20% 95%;
-    --secondary-foreground: 215 25% 20%;
-    --muted: 210 16% 94%;
-    --muted-foreground: 215 15% 46%;
-    --accent: 210 20% 92%;
-    --accent-foreground: 215 25% 15%;
+    --popover-foreground: 0 0% 15%;
+    --primary: 0 84% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 84% 95%;
+    --accent-foreground: 0 84% 40%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 18% 90%;
-    --input: 214 18% 90%;
-    --ring: 220 20% 40%;
-    --chart-1: 220 18% 22%;
-    --chart-2: 210 20% 55%;
-    --chart-3: 215 16% 35%;
-    --chart-4: 210 22% 72%;
-    --chart-5: 215 20% 62%;
-    --radius: 0.5rem;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 84% 50%;
+    --chart-1: 0 84% 50%;
+    --chart-2: 0 60% 60%;
+    --chart-3: 0 40% 70%;
+    --chart-4: 0 20% 80%;
+    --chart-5: 0 10% 85%;
+    --radius: 0.75rem;
   }
   .dark {
-    --background: 230 15% 6%;
-    --foreground: 220 14% 94%;
-    --card: 230 12% 8%;
-    --card-foreground: 220 14% 94%;
-    --popover: 230 12% 8%;
-    --popover-foreground: 220 14% 94%;
-    --primary: 220 18% 88%;
-    --primary-foreground: 230 18% 10%;
-    --secondary: 225 8% 16%;
-    --secondary-foreground: 220 14% 94%;
-    --muted: 225 6% 18%;
-    --muted-foreground: 220 9% 65%;
-    --accent: 220 10% 20%;
-    --accent-foreground: 220 16% 90%;
-    --destructive: 0 62.8% 30.6%;
+    /* Dark theme tuned to PPT Girl nurse character: warm dark with red accents */
+    --background: 0 0% 8%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 84% 20%;
+    --accent-foreground: 0 84% 90%;
+    --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 225 7% 18%;
-    --input: 225 8% 20%;
-    --ring: 220 18% 88%;
-    --chart-1: 220 18% 88%;
-    --chart-2: 220 10% 70%;
-    --chart-3: 220 8% 55%;
-    --chart-4: 220 10% 40%;
-    --chart-5: 220 10% 30%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 84% 60%;
+    --chart-1: 0 84% 60%;
+    --chart-2: 0 70% 65%;
+    --chart-3: 0 60% 70%;
+    --chart-4: 0 50% 75%;
+    --chart-5: 0 40% 80%;
   }
 }
 
@@ -144,6 +145,54 @@
     }
     100% {
       background-position: 0% 50%;
+    }
   }
+
+  /* Message bubble slide-in animation */
+  .animate-message-in {
+    animation: message-in 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes message-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Pulse animation for status indicators */
+  .animate-pulse-slow {
+    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Heartbeat animation for medical theme */
+  .animate-heartbeat {
+    animation: heartbeat 1.5s ease-in-out infinite;
+  }
+
+  @keyframes heartbeat {
+    0%, 100% {
+      transform: scale(1);
+    }
+    10%, 30% {
+      transform: scale(1.1);
+    }
+    20%, 40% {
+      transform: scale(1);
+    }
   }
 }

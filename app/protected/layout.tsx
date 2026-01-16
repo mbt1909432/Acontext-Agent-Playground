@@ -25,7 +25,7 @@ export default function ProtectedLayout({
                 alt="PPT Girl"
                 width={100}
                 height={100}
-                className="h-8 w-8 rounded-full border border-primary/40 shadow-sm object-cover object-top"
+                className="h-8 w-8 rounded-full border-2 border-primary/50 shadow-md ring-1 ring-primary/20 object-cover object-top"
                 priority
               />
               <span className="text-sm font-semibold tracking-tight">
