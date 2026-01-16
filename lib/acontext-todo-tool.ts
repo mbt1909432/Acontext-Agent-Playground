@@ -126,7 +126,7 @@ export async function runTodo(
         // Automatically add the first task: search for skills
         const searchTask: TodoItem = {
           id: "task_search_skills",
-          content: "搜索相关技能和经验（使用 experience_search 工具）",
+          content: "Search for relevant skills and experiences (using experience_search tool)",
           status: "pending",
           createdAt: now,
           updatedAt: now,

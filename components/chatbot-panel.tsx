@@ -628,10 +628,32 @@ export function ChatbotPanel({
     };
   }, []);
 
-  // Auto-load previews for previewable files when files list changes
+  // Auto-refresh files list every 5 seconds when acontextDiskId is available
+  // This ensures the file list stays up-to-date with the remote Acontext disk
   useEffect(() => {
-    if (!isFilesModalOpen) return;
+    if (!acontextDiskId) return;
 
+    // Initial load when acontextDiskId becomes available
+    handleLoadFiles();
+
+    // Set up polling interval: refresh every 5 seconds
+    const intervalId = setInterval(() => {
+      // Only refresh if not currently loading to avoid overlapping requests
+      if (!isFilesLoading) {
+        handleLoadFiles();
+      }
+    }, 5000); // 5 seconds
+
+    // Cleanup interval on unmount or when acontextDiskId changes
+    return () => {
+      clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [acontextDiskId]);
+
+  // Auto-load previews for previewable files when files list changes
+  // This now works for both Files modal and right sidebar
+  useEffect(() => {
     // Function to fetch publicUrl for a file (lightweight, should be much faster than full content)
     const fetchFilePublicUrl = async (file: {
       id?: string;
@@ -700,7 +722,7 @@ export function ChatbotPanel({
       fetchFilePublicUrl(file);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, isFilesModalOpen, filePreviews, filePublicUrls, acontextDiskId]);
+  }, [files, filePreviews, filePublicUrls, acontextDiskId]);
 
   // Typewriter effect: gradually display buffered content
   const startTypewriter = (messageId: string, targetContent: string) => {
@@ -1857,12 +1879,12 @@ export function ChatbotPanel({
                     {message.role === "assistant" && (
                       <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/60 to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                     )}
-                    <div className="text-sm whitespace-pre-wrap relative z-10">
-                      {renderMessageContent(message.content)}
-                    </div>
                     {message.toolCalls && message.toolCalls.length > 0 && (
                       <ToolCallsDisplay toolCalls={message.toolCalls} isFullPage={false} />
                     )}
+                    <div className="text-sm whitespace-pre-wrap relative z-10">
+                      {renderMessageContent(message.content)}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2321,15 +2343,15 @@ export function ChatbotPanel({
                     )}
                     {message.role === "user" ? "User" : assistantName}
                   </div>
-                  <div className="text-sm leading-relaxed">
-                    {renderMessageContent(message.content)}
-                  </div>
                   {message.toolCalls && message.toolCalls.length > 0 && (
                     <ToolCallsDisplay
                       toolCalls={message.toolCalls}
                       isFullPage={true}
                     />
                   )}
+                  <div className="text-sm leading-relaxed">
+                    {renderMessageContent(message.content)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -2884,6 +2906,161 @@ export function ChatbotPanel({
           </div>
         )}
       </section>
+
+      {/* Right side: Images sidebar */}
+      <aside className="relative hidden h-full w-64 flex-col border-l bg-card px-4 py-3 lg:flex">
+        <div className="space-y-4 overflow-y-auto pr-1">
+          <div className="sticky top-0 bg-card pb-2 z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <FolderOpen className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Images</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {files.filter(f => {
+                const { isImage } = detectFileType(f.filename, f.mimeType);
+                return isImage;
+              }).length} image{files.filter(f => {
+                const { isImage } = detectFileType(f.filename, f.mimeType);
+                return isImage;
+              }).length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {isFilesLoading && files.length === 0 && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="ml-2 text-xs text-muted-foreground">
+                Loading images...
+              </span>
+            </div>
+          )}
+
+          {filesError && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2">
+              <div className="text-xs text-destructive">
+                Failed to load: {filesError}
+              </div>
+            </div>
+          )}
+
+          {!isFilesLoading && !filesError && files.filter(f => {
+            const { isImage } = detectFileType(f.filename, f.mimeType);
+            return isImage;
+          }).length === 0 && (
+            <div className="py-8 text-center">
+              <File className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
+              <div className="text-xs text-muted-foreground">
+                No images found
+              </div>
+            </div>
+          )}
+
+          {files
+            .filter(file => {
+              const { isImage } = detectFileType(file.filename, file.mimeType);
+              return isImage;
+            })
+            .map((file, index) => {
+              const fileKey = file.id || file.path || file.filename || String(index);
+              const preview = filePreviews.get(fileKey);
+              const mimeType = file.mimeType || "";
+              const { isImage } = detectFileType(file.filename, mimeType);
+              
+              if (!isImage) return null;
+
+              const previewMimeType = preview?.mimeType || mimeType;
+              const previewIsImage = previewMimeType.startsWith("image/") || 
+                                    (preview && detectFileType(file.filename, previewMimeType).isImage);
+
+              return (
+                <div
+                  key={fileKey}
+                  className="rounded-lg border bg-card p-2 space-y-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <File className="h-3 w-3 text-primary flex-shrink-0" />
+                    <span className="text-xs font-medium truncate" title={file.filename || file.path || "Unknown file"}>
+                      {file.filename || file.path || "Unknown file"}
+                    </span>
+                  </div>
+
+                  {/* Image Preview */}
+                  {preview && (
+                    <div className="mt-2">
+                      {preview.isLoading && (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                        </div>
+                      )}
+                      {preview.error && (
+                        <div className="rounded border border-destructive/50 bg-destructive/10 px-2 py-1">
+                          <div className="text-xs text-destructive">
+                            Error loading preview
+                          </div>
+                        </div>
+                      )}
+                      {!preview.isLoading && !preview.error && preview.content && previewIsImage && (
+                        <>
+                          {preview.isUrl ? (
+                            <div className="rounded border bg-muted overflow-hidden">
+                              <img
+                                src={preview.content}
+                                alt={file.filename || "Preview"}
+                                className="w-full h-auto max-h-48 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(preview.content, '_blank')}
+                                onError={(e) => {
+                                  console.error("[UI] Failed to load image preview from URL", {
+                                    fileKey,
+                                    filename: file.filename,
+                                    url: preview.content,
+                                  });
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="rounded border bg-muted overflow-hidden">
+                              <img
+                                src={`data:${previewMimeType};base64,${preview.content.replace(/\s/g, '')}`}
+                                alt={file.filename || "Preview"}
+                                className="w-full h-auto max-h-48 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  const dataUrl = `data:${previewMimeType};base64,${preview.content.replace(/\s/g, '')}`;
+                                  window.open(dataUrl, '_blank');
+                                }}
+                                onError={(e) => {
+                                  console.error("[UI] Failed to load image preview", {
+                                    fileKey,
+                                    filename: file.filename,
+                                  });
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Download button */}
+                  {(preview?.publicUrl || filePublicUrls.get(fileKey)) && (
+                    <a
+                      href={preview?.publicUrl || filePublicUrls.get(fileKey)}
+                      download={file.filename || file.path || "download"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center w-full rounded-md border bg-background px-2 py-1 text-xs font-medium text-primary shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      <Download className="mr-1 h-3 w-3" />
+                      Download
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      </aside>
     </div>
   );
 }

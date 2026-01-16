@@ -307,7 +307,7 @@ DO NOT skip this step. Always call experience_search first, then proceed with ot
 Workflow for complex tasks:
 1. User makes a complex request
 2. Call todo tool with action="create" to initialize a todo list
-   - This will automatically add a first task: "搜索相关技能和经验（使用 experience_search 工具）"
+   - This will automatically add a first task: "Search for relevant skills and experiences (using experience_search tool)"
    - You MUST complete this first task before adding others
 3. Execute the first task:
    - Update it to status="in_progress"
